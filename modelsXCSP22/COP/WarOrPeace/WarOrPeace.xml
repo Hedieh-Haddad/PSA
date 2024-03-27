@@ -1,0 +1,76 @@
+<instance format="XCSP3" type="COP">
+  <variables>
+    <array id="x" size="[8][8]"> 0 1 </array>
+    <array id="aux_gb" note="aux_gb[i] is the ith auxiliary variable having been automatically introduced" size="[28]"> 0..6 </array>
+  </variables>
+  <constraints>
+    <group>
+      <intension> or(eq(%0,1),eq(%1,0)) </intension>
+      <args> x[0][1] aux_gb[0] </args>
+      <args> x[0][2] aux_gb[1] </args>
+      <args> x[0][3] aux_gb[2] </args>
+      <args> x[0][4] aux_gb[3] </args>
+      <args> x[0][5] aux_gb[4] </args>
+      <args> x[0][6] aux_gb[5] </args>
+      <args> x[0][7] aux_gb[6] </args>
+      <args> x[1][2] aux_gb[7] </args>
+      <args> x[1][3] aux_gb[8] </args>
+      <args> x[1][4] aux_gb[9] </args>
+      <args> x[1][5] aux_gb[10] </args>
+      <args> x[1][6] aux_gb[11] </args>
+      <args> x[1][7] aux_gb[12] </args>
+      <args> x[2][3] aux_gb[13] </args>
+      <args> x[2][4] aux_gb[14] </args>
+      <args> x[2][5] aux_gb[15] </args>
+      <args> x[2][6] aux_gb[16] </args>
+      <args> x[2][7] aux_gb[17] </args>
+      <args> x[3][4] aux_gb[18] </args>
+      <args> x[3][5] aux_gb[19] </args>
+      <args> x[3][6] aux_gb[20] </args>
+      <args> x[3][7] aux_gb[21] </args>
+      <args> x[4][5] aux_gb[22] </args>
+      <args> x[4][6] aux_gb[23] </args>
+      <args> x[4][7] aux_gb[24] </args>
+      <args> x[5][6] aux_gb[25] </args>
+      <args> x[5][7] aux_gb[26] </args>
+      <args> x[6][7] aux_gb[27] </args>
+    </group>
+    <group>
+      <sum>
+        <list> %... </list>
+        <condition> (eq,%0) </condition>
+      </sum>
+      <args> aux_gb[0] and(eq(x[0][2],0),eq(x[1][2],0)) and(eq(x[0][3],0),eq(x[1][3],0)) and(eq(x[0][4],0),eq(x[1][4],0)) and(eq(x[0][5],0),eq(x[1][5],0)) and(eq(x[0][6],0),eq(x[1][6],0)) and(eq(x[0][7],0),eq(x[1][7],0)) </args>
+      <args> aux_gb[1] and(eq(x[0][1],0),eq(x[1][2],0)) and(eq(x[0][3],0),eq(x[2][3],0)) and(eq(x[0][4],0),eq(x[2][4],0)) and(eq(x[0][5],0),eq(x[2][5],0)) and(eq(x[0][6],0),eq(x[2][6],0)) and(eq(x[0][7],0),eq(x[2][7],0)) </args>
+      <args> aux_gb[2] and(eq(x[0][1],0),eq(x[1][3],0)) and(eq(x[0][2],0),eq(x[2][3],0)) and(eq(x[0][4],0),eq(x[3][4],0)) and(eq(x[0][5],0),eq(x[3][5],0)) and(eq(x[0][6],0),eq(x[3][6],0)) and(eq(x[0][7],0),eq(x[3][7],0)) </args>
+      <args> aux_gb[3] and(eq(x[0][1],0),eq(x[1][4],0)) and(eq(x[0][2],0),eq(x[2][4],0)) and(eq(x[0][3],0),eq(x[3][4],0)) and(eq(x[0][5],0),eq(x[4][5],0)) and(eq(x[0][6],0),eq(x[4][6],0)) and(eq(x[0][7],0),eq(x[4][7],0)) </args>
+      <args> aux_gb[4] and(eq(x[0][1],0),eq(x[1][5],0)) and(eq(x[0][2],0),eq(x[2][5],0)) and(eq(x[0][3],0),eq(x[3][5],0)) and(eq(x[0][4],0),eq(x[4][5],0)) and(eq(x[0][6],0),eq(x[5][6],0)) and(eq(x[0][7],0),eq(x[5][7],0)) </args>
+      <args> aux_gb[5] and(eq(x[0][1],0),eq(x[1][6],0)) and(eq(x[0][2],0),eq(x[2][6],0)) and(eq(x[0][3],0),eq(x[3][6],0)) and(eq(x[0][4],0),eq(x[4][6],0)) and(eq(x[0][5],0),eq(x[5][6],0)) and(eq(x[0][7],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[6] and(eq(x[0][1],0),eq(x[1][7],0)) and(eq(x[0][2],0),eq(x[2][7],0)) and(eq(x[0][3],0),eq(x[3][7],0)) and(eq(x[0][4],0),eq(x[4][7],0)) and(eq(x[0][5],0),eq(x[5][7],0)) and(eq(x[0][6],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[7] and(eq(x[0][1],0),eq(x[0][2],0)) and(eq(x[1][3],0),eq(x[2][3],0)) and(eq(x[1][4],0),eq(x[2][4],0)) and(eq(x[1][5],0),eq(x[2][5],0)) and(eq(x[1][6],0),eq(x[2][6],0)) and(eq(x[1][7],0),eq(x[2][7],0)) </args>
+      <args> aux_gb[8] and(eq(x[0][1],0),eq(x[0][3],0)) and(eq(x[1][2],0),eq(x[2][3],0)) and(eq(x[1][4],0),eq(x[3][4],0)) and(eq(x[1][5],0),eq(x[3][5],0)) and(eq(x[1][6],0),eq(x[3][6],0)) and(eq(x[1][7],0),eq(x[3][7],0)) </args>
+      <args> aux_gb[9] and(eq(x[0][1],0),eq(x[0][4],0)) and(eq(x[1][2],0),eq(x[2][4],0)) and(eq(x[1][3],0),eq(x[3][4],0)) and(eq(x[1][5],0),eq(x[4][5],0)) and(eq(x[1][6],0),eq(x[4][6],0)) and(eq(x[1][7],0),eq(x[4][7],0)) </args>
+      <args> aux_gb[10] and(eq(x[0][1],0),eq(x[0][5],0)) and(eq(x[1][2],0),eq(x[2][5],0)) and(eq(x[1][3],0),eq(x[3][5],0)) and(eq(x[1][4],0),eq(x[4][5],0)) and(eq(x[1][6],0),eq(x[5][6],0)) and(eq(x[1][7],0),eq(x[5][7],0)) </args>
+      <args> aux_gb[11] and(eq(x[0][1],0),eq(x[0][6],0)) and(eq(x[1][2],0),eq(x[2][6],0)) and(eq(x[1][3],0),eq(x[3][6],0)) and(eq(x[1][4],0),eq(x[4][6],0)) and(eq(x[1][5],0),eq(x[5][6],0)) and(eq(x[1][7],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[12] and(eq(x[0][1],0),eq(x[0][7],0)) and(eq(x[1][2],0),eq(x[2][7],0)) and(eq(x[1][3],0),eq(x[3][7],0)) and(eq(x[1][4],0),eq(x[4][7],0)) and(eq(x[1][5],0),eq(x[5][7],0)) and(eq(x[1][6],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[13] and(eq(x[0][2],0),eq(x[0][3],0)) and(eq(x[1][2],0),eq(x[1][3],0)) and(eq(x[2][4],0),eq(x[3][4],0)) and(eq(x[2][5],0),eq(x[3][5],0)) and(eq(x[2][6],0),eq(x[3][6],0)) and(eq(x[2][7],0),eq(x[3][7],0)) </args>
+      <args> aux_gb[14] and(eq(x[0][2],0),eq(x[0][4],0)) and(eq(x[1][2],0),eq(x[1][4],0)) and(eq(x[2][3],0),eq(x[3][4],0)) and(eq(x[2][5],0),eq(x[4][5],0)) and(eq(x[2][6],0),eq(x[4][6],0)) and(eq(x[2][7],0),eq(x[4][7],0)) </args>
+      <args> aux_gb[15] and(eq(x[0][2],0),eq(x[0][5],0)) and(eq(x[1][2],0),eq(x[1][5],0)) and(eq(x[2][3],0),eq(x[3][5],0)) and(eq(x[2][4],0),eq(x[4][5],0)) and(eq(x[2][6],0),eq(x[5][6],0)) and(eq(x[2][7],0),eq(x[5][7],0)) </args>
+      <args> aux_gb[16] and(eq(x[0][2],0),eq(x[0][6],0)) and(eq(x[1][2],0),eq(x[1][6],0)) and(eq(x[2][3],0),eq(x[3][6],0)) and(eq(x[2][4],0),eq(x[4][6],0)) and(eq(x[2][5],0),eq(x[5][6],0)) and(eq(x[2][7],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[17] and(eq(x[0][2],0),eq(x[0][7],0)) and(eq(x[1][2],0),eq(x[1][7],0)) and(eq(x[2][3],0),eq(x[3][7],0)) and(eq(x[2][4],0),eq(x[4][7],0)) and(eq(x[2][5],0),eq(x[5][7],0)) and(eq(x[2][6],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[18] and(eq(x[0][3],0),eq(x[0][4],0)) and(eq(x[1][3],0),eq(x[1][4],0)) and(eq(x[2][3],0),eq(x[2][4],0)) and(eq(x[3][5],0),eq(x[4][5],0)) and(eq(x[3][6],0),eq(x[4][6],0)) and(eq(x[3][7],0),eq(x[4][7],0)) </args>
+      <args> aux_gb[19] and(eq(x[0][3],0),eq(x[0][5],0)) and(eq(x[1][3],0),eq(x[1][5],0)) and(eq(x[2][3],0),eq(x[2][5],0)) and(eq(x[3][4],0),eq(x[4][5],0)) and(eq(x[3][6],0),eq(x[5][6],0)) and(eq(x[3][7],0),eq(x[5][7],0)) </args>
+      <args> aux_gb[20] and(eq(x[0][3],0),eq(x[0][6],0)) and(eq(x[1][3],0),eq(x[1][6],0)) and(eq(x[2][3],0),eq(x[2][6],0)) and(eq(x[3][4],0),eq(x[4][6],0)) and(eq(x[3][5],0),eq(x[5][6],0)) and(eq(x[3][7],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[21] and(eq(x[0][3],0),eq(x[0][7],0)) and(eq(x[1][3],0),eq(x[1][7],0)) and(eq(x[2][3],0),eq(x[2][7],0)) and(eq(x[3][4],0),eq(x[4][7],0)) and(eq(x[3][5],0),eq(x[5][7],0)) and(eq(x[3][6],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[22] and(eq(x[0][4],0),eq(x[0][5],0)) and(eq(x[1][4],0),eq(x[1][5],0)) and(eq(x[2][4],0),eq(x[2][5],0)) and(eq(x[3][4],0),eq(x[3][5],0)) and(eq(x[4][6],0),eq(x[5][6],0)) and(eq(x[4][7],0),eq(x[5][7],0)) </args>
+      <args> aux_gb[23] and(eq(x[0][4],0),eq(x[0][6],0)) and(eq(x[1][4],0),eq(x[1][6],0)) and(eq(x[2][4],0),eq(x[2][6],0)) and(eq(x[3][4],0),eq(x[3][6],0)) and(eq(x[4][5],0),eq(x[5][6],0)) and(eq(x[4][7],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[24] and(eq(x[0][4],0),eq(x[0][7],0)) and(eq(x[1][4],0),eq(x[1][7],0)) and(eq(x[2][4],0),eq(x[2][7],0)) and(eq(x[3][4],0),eq(x[3][7],0)) and(eq(x[4][5],0),eq(x[5][7],0)) and(eq(x[4][6],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[25] and(eq(x[0][5],0),eq(x[0][6],0)) and(eq(x[1][5],0),eq(x[1][6],0)) and(eq(x[2][5],0),eq(x[2][6],0)) and(eq(x[3][5],0),eq(x[3][6],0)) and(eq(x[4][5],0),eq(x[4][6],0)) and(eq(x[5][7],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[26] and(eq(x[0][5],0),eq(x[0][7],0)) and(eq(x[1][5],0),eq(x[1][7],0)) and(eq(x[2][5],0),eq(x[2][7],0)) and(eq(x[3][5],0),eq(x[3][7],0)) and(eq(x[4][5],0),eq(x[4][7],0)) and(eq(x[5][6],0),eq(x[6][7],0)) </args>
+      <args> aux_gb[27] and(eq(x[0][6],0),eq(x[0][7],0)) and(eq(x[1][6],0),eq(x[1][7],0)) and(eq(x[2][6],0),eq(x[2][7],0)) and(eq(x[3][6],0),eq(x[3][7],0)) and(eq(x[4][6],0),eq(x[4][7],0)) and(eq(x[5][6],0),eq(x[5][7],0)) </args>
+    </group>
+  </constraints>
+  <objectives>
+    <minimize type="sum"> x[0][1..7] x[1][2..7] x[2][3..7] x[3][4..7] x[4][5..7] x[5][6..7] x[6][7] </minimize>
+  </objectives>
+</instance>
