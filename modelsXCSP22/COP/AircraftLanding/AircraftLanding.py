@@ -11,6 +11,7 @@ def aircraftlanding():
         valh = f.readline().strip()
         phase = f.readline().strip()
         solver = f.readline().strip()
+        restart = f.readline().strip()
     nPlanes, times, costs, separations = data
     earliest, target, latest = zip(*times)
     early_penalties, late_penalties = zip(*costs)
@@ -52,9 +53,16 @@ def aircraftlanding():
         e * early_penalties + t * late_penalties
     )
     if solver == 'choco':
-        solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,500,0,50000,true]") # -restarts [GEOMETRIC,500,0,50000,true]
+        if restart == "GEOMETRIC":
+            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,500,1.2,50000,true]") # -restarts [GEOMETRIC,500,0,50000,true]
+        elif restart == "luby":
+            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,500,0,50000,true]")
+
     elif solver == 'ace':
-        solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n=500 -ref="" ") # -lc
+        if restart == "GEOMETRIC":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n=500 -ref="" ")
+        elif restart == "luby":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n=500 -ref="" ")
     print("NSolution" , n_solutions())
     print("Objective" , bound())
     print("Status" , status())

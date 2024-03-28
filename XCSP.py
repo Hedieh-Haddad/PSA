@@ -22,8 +22,8 @@ class XCSP:
         self.model = config.model
         self.data = config.data
         self.dataparser = config.dataparser
-        self.solver = 'choco'
-        # self.solver = 'ace'
+        # self.solver = 'choco'
+        self.solver = 'ace'
         # self.modes = ["MultiArmed"]
         self.modes = ["BayesianOptimisation", "FreeSearch", "MultiArmed"]
         if self.solver == 'choco':
@@ -171,8 +171,9 @@ class XCSP:
                         self.AST(self.K, m)
                         self.find_best_rows()
                         BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                                   "valh": self.find_best_rows()['valh'].iloc[0]}
-                        self.solveXCSP(BestRow["varh"], BestRow["valh"])
+                                   "valh": self.find_best_rows()['valh'].iloc[0],
+                                   "restart": self.find_best_rows()['restart'].iloc[0]}
+                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"])
                         self.newval = BestRow["valh"]
                         # print(self.newval)
                         self.save_results_to_csv()
@@ -250,13 +251,13 @@ class XCSP:
                 self.solveXCSP(varh, valh)
 
     def beysian_optimisation(self):
-        SpaceParams = {**self.parameters , self.RestartStrategy}
+        SpaceParams = {**self.parameters, 'RestartStrategy': self.RestartStrategy}
         opt = Optimizer(dimensions=dimensions_aslist(SpaceParams), base_estimator="GP")
         def func(params):
             params = point_asdict(SpaceParams, params)
             varh = params["varh_values"]
             valh = params["valh_values"]
-            restrat = params["restart_values"]
+            restrat = params["RestartStrategy"]
             self.solveXCSP(varh, valh, restrat)
             return 1
 
@@ -538,7 +539,7 @@ class XCSP:
                 # self.reward = (math.log2(elapsed_time)) / (math.log2(bound))
             except:
                 self.reward = None
-            print("Reward: ", self.reward)
+            # print("Reward: ", self.reward)
         except TimeoutError:
             end_time = time.time()
             elapsed_time = end_time - start_time
@@ -589,6 +590,7 @@ class XCSP:
             "mode": self.mode,
             "varh": varh,
             "valh": valh,
+            "restart": restart,
             "Objective": bound,
             "ElapsedTime": elapsed_time,
             "Fraction": self.result_timeout_sec
@@ -599,6 +601,7 @@ class XCSP:
                 "mode": self.mode,
                 "varh": varh,
                 "valh": valh,
+                "restart": restart,
                 "Objective": bound,
                 "ElapsedTime": elapsed_time,
                 "Fraction": self.result_timeout_sec
@@ -609,6 +612,7 @@ class XCSP:
                 "mode": self.mode,
                 "varh": varh,
                 "valh": valh,
+                "restart": restart,
                 "Objective": bound,
                 "ElapsedTime": elapsed_time,
                 "Fraction": self.result_timeout_sec
@@ -641,6 +645,7 @@ class XCSP:
                                        ascending=[True, True, True], inplace=True)
             best_rows = results_df.drop_duplicates(subset='mode', keep='first')
             self.flag = True
+            print(best_rows)
             return best_rows
         except AttributeError:
             return None

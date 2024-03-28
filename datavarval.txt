@@ -1,4 +1,5 @@
-CRBS
-AsgsFp
-False
+Memory
+Vals
+True
 ace
+GEOMETRIC
