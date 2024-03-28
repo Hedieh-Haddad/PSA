@@ -22,10 +22,10 @@ class XCSP:
         self.model = config.model
         self.data = config.data
         self.dataparser = config.dataparser
-        # self.solver = 'choco'
-        self.solver = 'ace'
+        self.solver = 'choco'
+        # self.solver = 'ace'
         # self.modes = ["MultiArmed"]
-        self.modes = ["FreeSearch", "BayesianOptimisation", "MultiArmed"]
+        self.modes = ["BayesianOptimisation", "FreeSearch", "MultiArmed"]
         if self.solver == 'choco':
             self.parameters = {
                 'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
@@ -147,20 +147,20 @@ class XCSP:
             #     self.save_results_to_csv()
 
             elif self.mode == "BayesianOptimisation":
-                for strategy in self.RestartStrategy:
-                    for fraction in self.fractions:
-                        self.f = fraction
-                        self.probe_timeout_sec = self.global_timeout_sec * fraction
-                        print(self.probe_timeout_sec)
-                        self.results_list = []
-                        self.beysian_optimisation()
-                        self.find_best_rows()
-                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                                   "valh": self.find_best_rows()['valh'].iloc[0]}
-                        self.solveXCSP(BestRow["varh"], BestRow["valh"])
-                        self.newval = BestRow["valh"]
-                        # print(self.newval)
-                        self.save_results_to_csv()
+                for fraction in self.fractions:
+                    self.f = fraction
+                    self.probe_timeout_sec = self.global_timeout_sec * fraction
+                    print(self.probe_timeout_sec)
+                    self.results_list = []
+                    self.beysian_optimisation()
+                    self.find_best_rows()
+                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                               "valh": self.find_best_rows()['valh'].iloc[0],
+                               "restart": self.find_best_rows()['restart'].iloc[0]}
+                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"])
+                    self.newval = BestRow["valh"]
+                    # print(self.newval)
+                    self.save_results_to_csv()
 
             elif self.mode == "MultiArmed":
                 for fraction in self.fractions:
@@ -250,13 +250,14 @@ class XCSP:
                 self.solveXCSP(varh, valh)
 
     def beysian_optimisation(self):
-        SpaceParams = self.parameters
+        SpaceParams = {**self.parameters , self.RestartStrategy}
         opt = Optimizer(dimensions=dimensions_aslist(SpaceParams), base_estimator="GP")
         def func(params):
             params = point_asdict(SpaceParams, params)
             varh = params["varh_values"]
             valh = params["valh_values"]
-            self.solveXCSP(varh, valh)
+            restrat = params["restart_values"]
+            self.solveXCSP(varh, valh, restrat)
             return 1
 
         for i in range(self.rounds):
@@ -273,70 +274,29 @@ class XCSP:
         best_params = point_asdict(SpaceParams, opt.Xi[np.argmin(opt.yi)])
         return best_params
 
-    # def adaptive_successive_halving(K):
-    #     T_0 = K * int(math.log2(K))
-    #     S_0 = list(range(K))  # Assuming arms are represented by integers
-    #     T_p = T_0
-    #
-    #     p = 0
-    #     while True:
-    #         S_q = S_0.copy()
-    #         for q in range(int(math.log2(K))):
-    #             s_q = int(T_p / (len(S_q) * int(math.log2(K))))
-    #             rewards = [play_arm(arm, s_q) for arm in S_q]  # play_arm function needs to be defined
-    #             S_q = [x for _, x in sorted(zip(rewards, S_q))][:len(S_q) // 2]
-    #         play_arm(S_q[0], 1)  # Play the unique arm in S_q
-    #         T_p = 2 * T_p
-    #         p += 1
 
-    # def adaptive_single_tournament(K, m):
-    #     S = list(range(K))  # Assuming arms are represented by integers
-    #     t = 1
-    #     while True:
-    #         if sigma_luby(t) == 1:  # sigma_luby function needs to be defined
-    #             i = np.random.choice(S)
-    #             S.remove(i)
-    #             if len(S) == 0:
-    #                 S = list(range(K))
-    #         else:
-    #             i_left = S[t - sigma_luby(t)]
-    #             i_right = S[t - 1]
-    #             rewards = [play_arm(arm, m) for arm in [i_left, i_right]]  # play_arm function needs to be defined
-    #             i = [i_left, i_right][np.argmax(rewards)]
-    #         play_arm(i, m)
-    #         t += 1
-
-
-    # def ASH(K):
-    #     T_0 = K * np.log2(K)
-    #     p = 0
-    #     while True:
-    #         S_0 = list(range(K))
-    #         for q in range(int(np.log2(K))):
-    #             s_q = int(T_0 / (len(S_0) * np.log2(K)))
-    #             rewards = [play_arm(arm, s_q) for arm in S_0]
-    #             S_0 = [x for _, x in sorted(zip(rewards, S_0))][:len(S_0) // 2]
-    #         play_arm(S_0[0], 1)
-    #         T_0 *= 2
-    #         p += 1
 
     def AST(self, K, m):
-        print()
         def sigma_luby(n):
             sequence = [1]
             while len(sequence) < n:
                 sequence += sequence + [2 * sequence[-1]]
             return sequence[:n]
+
         S = self.parameters['varh_values']
         V = iter(sorted(self.parameters['valh_values']))
+        R = iter(self.RestartStrategy)
         t = 1
         arms_played = {}
         for t in range(1, m):
             valh = next(V, None)
+            restart = next(R, None)
             if valh is None:
                 V = iter(sorted(self.parameters['valh_values']))
                 valh = next(V)
-            # print(sigma_luby(t)[-1])
+            if restart is None:
+                R = iter(self.RestartStrategy)
+                restart = next(R)
             if sigma_luby(t)[-1] == 1:
                 i = np.random.choice(S)
                 arms_played[t] = i
@@ -346,17 +306,16 @@ class XCSP:
             else:
                 i_right = arms_played[t - 1]
                 i_left = arms_played[t - (sigma_luby(t)[-1])]
-                self.solveXCSP(i_left, valh)
+                self.solveXCSP(i_left, valh, restart)
                 left_reward = self.reward
-                self.solveXCSP(i_right, valh)
+                self.solveXCSP(i_right, valh, restart)
                 right_reward = self.reward
                 if left_reward < right_reward:
                     i = i_left
                 else:
                     i = i_right
                 arms_played[t] = i
-            self.solveXCSP(i, valh)
-
+            self.solveXCSP(i, valh, restart)
 
     def freesearch(self):
         n_solutions, bound, status, solution = None, None, None, None
@@ -476,7 +435,7 @@ class XCSP:
         # print(self.counter)
         return T
 
-    def solveXCSP(self , varh , valh):
+    def solveXCSP(self , varh , valh, restart):
         if not self.flag:
             if self.mode == "GridSearch":
                 self.result_timeout_sec = self.probe_timeout_sec / (
@@ -524,13 +483,14 @@ class XCSP:
             "found_solutions": 0,
             "final_bound": 0
         }
-        print(f'Running with varh={varh}, valh={valh}, solver={self.solver} , Time={int(self.result_timeout_sec)} sec')
+        print(f'Running with varh={varh}, valh={valh}, restart={restart}, solver={self.solver} , Time={int(self.result_timeout_sec)} sec')
         signal.alarm(int(self.result_timeout_sec))
         with open('datavarval.txt', 'w') as f:
             f.write(f'{varh}\n')
             f.write(f'{valh}\n')
             f.write(f'{self.flag}\n')
             f.write(f'{self.solver}\n')
+            f.write(f'{restart}\n')
         cmd = ["python3", f"modelsXCSP22/COP/{self.model}/{self.model}.py"]
         if self.data:
             cmd.append(f"-data=modelsXCSP22/COP/{self.model}/{self.data}")
