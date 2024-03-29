@@ -12,6 +12,10 @@ def BeerJugs():
         valh = f.readline().strip()
         phase = f.readline().strip()
         solver = f.readline().strip()
+        restart = f.readline().strip()
+        restartsequence = f.readline().strip()
+        geocoef = f.readline().strip()
+
     if isinstance(data, int):  # index of data used in the contest
         A, B, MAX = *[(3, 4), (3, 10), (7, 10), (9, 10), (5, 12), (7, 12), (11, 12), (11, 14), (11, 16), (13, 16), (15, 16)][data], 70
     else:
@@ -72,9 +76,18 @@ def BeerJugs():
        [(z,y[t]) in [(v,STOP) for v in range(t+1)] + [(v,w) for v in range(t+1,MAX) for w in Actions if w != STOP] for t in range(MAX)]
     """
     if solver == 'choco':
-        solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,500,0,50000,true]")
+        if restart == "GEOMETRIC":
+            solve(solver=solver,
+                  options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},{geocoef},50000,true]")  # -restarts [GEOMETRIC,500,0,50000,true]
+        elif restart == "luby":
+            solve(solver=solver,
+                  options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
+
     elif solver == 'ace':
-        solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n=500") # -lc
+        if restart == "GEOMETRIC":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence} -ref="" ")
+        elif restart == "luby":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence} -ref="" ")
     print("NSolution" , n_solutions())
     print("Objective" , bound())
     print("Status" , status())

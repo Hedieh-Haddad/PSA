@@ -12,6 +12,9 @@ def aircraftlanding():
         phase = f.readline().strip()
         solver = f.readline().strip()
         restart = f.readline().strip()
+        restartsequence = f.readline().strip()
+        geocoef = f.readline().strip()
+
     nPlanes, times, costs, separations = data
     earliest, target, latest = zip(*times)
     early_penalties, late_penalties = zip(*costs)
@@ -54,15 +57,15 @@ def aircraftlanding():
     )
     if solver == 'choco':
         if restart == "GEOMETRIC":
-            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,500,1.2,50000,true]") # -restarts [GEOMETRIC,500,0,50000,true]
+            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},{geocoef},50000,true]") # -restarts [GEOMETRIC,500,0,50000,true]
         elif restart == "luby":
-            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,500,0,50000,true]")
+            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
 
     elif solver == 'ace':
         if restart == "GEOMETRIC":
-            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n=500 -ref="" ")
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence} -ref="" ")
         elif restart == "luby":
-            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n=500 -ref="" ")
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence} -ref="" ")
     print("NSolution" , n_solutions())
     print("Objective" , bound())
     print("Status" , status())

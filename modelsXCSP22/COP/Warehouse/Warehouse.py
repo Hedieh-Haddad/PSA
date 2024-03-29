@@ -15,6 +15,9 @@ def Warehouse():
         valh = f.readline().strip()
         phase = f.readline().strip()
         solver = f.readline().strip()
+        restart = f.readline().strip()
+        restartsequence = f.readline().strip()
+        geocoef = f.readline().strip()
 
     cost, capacities, costs = data  # cost is the fixed cost when opening a warehouse
     nWarehouses, nStores = len(capacities), len(costs)
@@ -58,10 +61,18 @@ def Warehouse():
        in order to remain in the perimeter of XCP3-core   
     """
     if solver == 'choco':
-        solve(solver=solver,
-              options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,500,0,50000,true]")
+        if restart == "GEOMETRIC":
+            solve(solver=solver,
+                  options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},{geocoef},50000,true]")  # -restarts [GEOMETRIC,500,0,50000,true]
+        elif restart == "luby":
+            solve(solver=solver,
+                  options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
+
     elif solver == 'ace':
-        solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n=500")  # -lc
+        if restart == "GEOMETRIC":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence} -ref="" ")
+        elif restart == "luby":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence} -ref="" ")
     print("NSolution", n_solutions())
     print("Objective", bound())
     print("Status", status())

@@ -16,6 +16,10 @@ def HCPizza():
         valh = f.readline().strip()
         phase = f.readline().strip()
         solver = f.readline().strip()
+        restart = f.readline().strip()
+        restartsequence = f.readline().strip()
+        geocoef = f.readline().strip()
+
     minIngredients, maxSize, pizza = data
     n, m = len(pizza), len(pizza[0])  # nRows and nColumns
     patterns = [(i, j) for i in range(1, min(maxSize, n) + 1) for j in range(1, min(maxSize, m) + 1) if 2 * minIngredients <= i * j <= maxSize]
@@ -71,10 +75,18 @@ def HCPizza():
         z
     )
     if solver == 'choco':
-        solve(solver=solver,
-              options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,500,0,50000,true]")
+        if restart == "GEOMETRIC":
+            solve(solver=solver,
+                  options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},{geocoef},50000,true]")  # -restarts [GEOMETRIC,500,0,50000,true]
+        elif restart == "luby":
+            solve(solver=solver,
+                  options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
+
     elif solver == 'ace':
-        solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n=500")  # -lc
+        if restart == "GEOMETRIC":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence} -ref="" ")
+        elif restart == "luby":
+            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence} -ref="" ")
     print("NSolution", n_solutions())
     print("Objective", bound())
     print("Status", status())

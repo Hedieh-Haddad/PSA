@@ -1,0 +1,8 @@
+c Choco 231113
+o 23 0.0
+o 22 0.0
+o 21 0.0
+s OPTIMUM FOUND
+v <instantiation id='sol3' type='solution' cost='21' ><list>x[0] x[1] x[2] x[3] x[4] x[5] x[6] x[7] x[8] x[9] x[10] x[11] z </list><values>1 6 12 3 5 11 2 8 9 4 7 10 21 </values></instantiation>
+d FOUND SOLUTIONS 3
+

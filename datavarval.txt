@@ -1,5 +1,7 @@
-Memory
-Vals
+DOMWDEG_CACD
+MIN
 True
-ace
-GEOMETRIC
+choco
+luby
+1000
+5.0
