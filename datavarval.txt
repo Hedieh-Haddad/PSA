@@ -1,7 +1,7 @@
-DOMWDEG_CACD
-MIN
+FRBA
+MAX
 True
 choco
-luby
-1000
-5.0
+GEOMETRIC
+200
+1.5
