@@ -12,7 +12,7 @@ class Config:
     parser.add_argument('--dataparser', type=str, required=False, help='The data parser (.py), only for XCSP3 instances.')
     parser.add_argument('--solver', type=str , required=True, help='The backend solver: ace | choco | ortools.')
     parser.add_argument('--timeout', required=True, type=int, help='The solving timeout in seconds.')
-    parser.add_argument('--search_strategy', required=False, type=str, help='The search strategy to use: user | pick | domwdeg | free. `user` indicates we use the search strategy in the model, if any. `free` means free search. Only when --hpo is `none`.')
+    parser.add_argument('--search_strategy', required=False, type=str, help='The search strategy to use: user | free | [var]-[val]. `user` indicates we use the search strategy in the model, if any. `free` means free search. Only when --hpo is `none`.')
     parser.add_argument('--hpo', required=True, type=str, help='HPO algorithm to apply: none | bayesian | grid | multiarmed | random | hyperband')
     parser.add_argument('--probing_ratio', required=False, type=float, help='If 0.2, 20 percent of the time is dedicated to selecting the best search strategy (probing phase). Only when --hpo is not `none`.')
     parser.add_argument('--rounds', type=int, required=False, help='The number of iterations the HPO algorithm performs. The more iterations, the less time per iterations. Only when --hpo is not `none`.')
