@@ -14,6 +14,7 @@ import re
 
 class TimeoutError (Exception):
     pass
+
 class XCSP:
     def __init__(self, config):
         self.final_results_list = []  # Initialize lists for result_phase and probe_phase
@@ -56,19 +57,7 @@ class XCSP:
         signal.signal (signal.SIGALRM, handler)
         for mode in self.modes:
             self.mode = mode
-            if self.mode == "BayesianOptimisation":
-                print(
-                    f"Running {self.mode} analysis")
-            elif self.mode == "FreeSearch":
-                print(
-                    f"Running {self.mode} analysis with, solver={self.solver} , Time={int(self.global_timeout_sec)} sec")
-            elif self.mode == "MultiArmed":
-                print(
-                    f"Running {self.mode} analysis")
-            else:
-                print(
-                    f"Running {self.mode} analysis")
-
+            print(f"Running {self.mode} analysis with, solver={self.solver}, Time={int(self.global_timeout_sec)} sec")
             if self.mode == "BayesianOptimisation":
                 for fraction in self.fractions:
                     self.probe_timeout_sec = self.global_timeout_sec * fraction #set the probing time-out
@@ -223,6 +212,7 @@ class XCSP:
         start_time = time.time()
         # Run the model and capture the output
         try:
+            print(cmd)
             output = subprocess.run(cmd, universal_newlines=True, text=True, capture_output=True)
             end_time = time.time()
             elapsed_time = end_time - start_time
@@ -395,6 +385,7 @@ class XCSP:
 
     def parse_output(self, output):
         lines = output.stdout.split('\n') # Split the output into lines
+        n_solutions, bound, status, solution = None , None , None , None
         for line in lines:# If a line starts with "NSolution", "Objective", "Status", or "Solution", extract the corresponding value
             if line.startswith("NSolution"):
                 n_solutions = int(line.split()[1]) if line.split()[1] != 'None' else None
