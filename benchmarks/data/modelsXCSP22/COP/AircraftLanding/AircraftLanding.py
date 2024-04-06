@@ -56,16 +56,43 @@ def aircraftlanding():
         e * early_penalties + t * late_penalties
     )
     if solver == 'choco':
-        if restart == "GEOMETRIC":
-            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},{geocoef},50000,true]") # -restarts [GEOMETRIC,500,0,50000,true]
-        elif restart == "luby":
-            solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
+        if geocoef == "None":
+            if restartsequence == "None":
+                if restart == "None":
+                    solve(solver=solver, options=f"-f -varh={varh} -valh={valh} -best -last -lc 1")
+            elif restartsequence != "None":
+                if restart != "None":
+                    if restart == "GEOMETRIC":
+                        solve(solver=solver,
+                              options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},1,50000,true]")
+                    elif restart == "luby":
+                        solve(solver=solver,
+                              options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
+        elif geocoef != "None":
+            if restart == "GEOMETRIC":
+                solve(solver=solver,
+                      options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [GEOMETRIC,{restartsequence},{geocoef},50000,true]")
+            elif restart == "luby":
+                solve(solver=solver,
+                      options=f"-f -varh={varh} -valh={valh} -best -last -lc 1 -restarts [luby,{restartsequence},0,50000,true]")
 
     elif solver == 'ace':
-        if restart == "GEOMETRIC":
-            solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence} -ref="" ")
-        elif restart == "luby":
-            solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence} -ref="" ")
+        if geocoef == "None":
+            if restartsequence == "None":
+                if restart == "None":
+                    solve(solver=solver, options=f"-varh={varh} -valh={valh} ")
+            elif restartsequence != "None":
+                if restart != "None":
+                    if restart == "GEOMETRIC":
+                        solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence}")
+                    elif restart == "luby":
+                        solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence}")
+        elif geocoef != "None":
+            if restart == "GEOMETRIC":
+                solve(solver=solver, options=f"-varh={varh} -valh={valh} -r_n={restartsequence}")
+            elif restart == "luby":
+                solve(solver=solver, options=f"-varh={varh} -valh={valh} -luby -r_n={restartsequence}")
+
     print("NSolution" , n_solutions())
     print("Objective" , bound())
     print("Status" , status())

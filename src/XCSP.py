@@ -1,64 +1,172 @@
 import signal
 import subprocess
 import pandas as pd
-import numpy as np
-import scipy
-from skopt import Optimizer
-from skopt.utils import point_asdict, dimensions_aslist
-import random
 import time
 import glob
 import os
 import math
 import re
+from minizinc import Instance, Model, Solver
+from hpo.bayesian import Bayesian
+from hpo.multiarmed import MultiArmed
+from hpo.hyperband import HyperBand
+from hpo.grid import Grid
+from hpo.random import Random
+
 
 class TimeoutError (Exception):
     pass
-
-class XCSP:
+class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
     def __init__(self, config):
-        self.final_results_list = []  # Initialize lists for result_phase and probe_phase
+        self.format = "XCSP3"
+        # self.format = "Minizinc"
+        self.final_results_list = []
         self.results_list = []
+        self.used_pairs = []
+        self.Blocks = [] # m
+        self.NBlocks = 0 # m
+        self.method = "" # m
+        self.counter = 0 # m
+        self.EvaluationFlag = False # m
+        self.StrategyFlag = False # m
+        self.f = ''  # m
         self.model = config.model
         self.data = config.data
         self.dataparser = config.dataparser
-        self.solver = 'choco'
-        # self.solver = 'ace'
-        self.modes = ["MultiArmed", "BayesianOptimisation", "FreeSearch"]
-        if self.solver == 'choco':
-            self.parameters = {
-                'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
-                'valh_values': ['MAX', 'MIN', 'MED', 'MIDFLOOR', 'MIDCEIL', 'RAND']}
-        elif self.solver == 'ace':
-            self.parameters = {
-                'varh_values' : ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom' ],
-                'valh_values' : ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp'] }
-        self.RestartStrategy = ["luby", "GEOMETRIC"] # Set restart strategy for choco and ace (we just have luby and geometric)
-        self.restartsequence = [50, 100 , 200, 500 , 1000] #Set restart frequency
-        self.geocoef = [1, 1.2 , 1.5 , 2 , 5] # Set geometric coefficient that will multiply into restart frequency of geometric strategy (normally it is == 1.2)
-        # self.geocoef = [1.2]
-        self.rounds = config.rounds
-        self.global_timeout_sec = config.global_timeout_sec # Initialize the global timeout (normally == 1200)
-        self.probe_timeout_sec = 0    # Initialize the timeout for probing phase (normally 20% of global time == 1200 * 0.2)
-        self.result_timeout_sec = 0  # Initialize the timeout for each round in probing phase (normally  = probing time-out / number of rounds)
-        self.NSolution = None # Initialize the variable for fetching information of solver like final solution, objective, CSP or COP(SAT/OPTIMUM), number of found solutions
+        self.solver = config.solver
+        # config.hpo = ["GridSearch", "RandomSearch", "BayesianOptimisation", "MultiArmed", "HyperBand", "None"]
+        # config.search_strategy = ["FreeSearch", "UserDefined", "[var]-[val]"]
+        # config.hyperparameters_restart = ["None", "Restart", "Full_Restart"]
+
+        # config.hyperparameters_search = ["None", "only_variable_strategy", "only_value_strategy", "simple_search_strategy", "block_search_strategy"]
+        if config.hyperparameters_search == "None":
+            self.solver == 'chocoooooo'
+        elif config.hyperparameters_search == "Only_Var":
+            if self.solver == 'choco':
+                self.parameters = {
+                    'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
+                    'valh_values': ['MED']}
+            elif self.solver == 'ace':
+                self.parameters = {
+                    'varh_values': ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom'],
+                    'valh_values': ['Median']}
+        elif config.hyperparameters_search == "Only_Val":
+            if self.solver == 'choco':
+                self.parameters = {
+                    'varh_values': ['DOMWDEG'],
+                    'valh_values': ['MAX', 'MIN', 'MED', 'MIDFLOOR', 'MIDCEIL', 'RAND']}
+            elif self.solver == 'ace':
+                self.parameters = {
+                    'varh_values': ['Wdeg'],
+                    'valh_values': ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp']}
+        elif config.hyperparameters_search == "Simple_Search":
+            if self.solver == 'choco':
+                self.parameters = {
+                    'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
+                    'valh_values': ['MAX', 'MIN', 'MED', 'MIDFLOOR', 'MIDCEIL', 'RAND']}
+            elif self.solver == 'ace':
+                self.parameters = {
+                    'varh_values': ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom'],
+                    'valh_values': ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp']}
+        # elif config.hyperparameters_search == "Block_Search":
+        #     if format == "Minizinc":
+        #
+        #     elif format == "XCSP3":
+
+        if config.hyperparameters_restart == "None":
+            self.RestartStrategy = ["None"]
+            self.restartsequence = ["None"]
+            self.geocoef = ["None"]
+        elif config.hyperparameters_restart == "Restart":
+            self.RestartStrategy = ["luby", "GEOMETRIC"]
+            self.restartsequence = [100 , 200, 500]
+            self.geocoef = ["None"]
+        elif config.hyperparameters_restart == "Full_Restart":
+            self.RestartStrategy = ["luby", "GEOMETRIC"]
+            self.restartsequence = [100 , 200, 500]
+            self.geocoef = [1.2 , 1.5 , 2]
+
+        self.global_timeout_sec = config.timeout
+        self.probe_timeout_sec = 0
+        self.result_timeout_sec = 0
+        self.NSolution = None
         self.Objective = None
         self.Status = None
         self.Solution = None
-        self.flag = False # set the flag for make the changes(transmit information ) from probing phase to result phase(like set the time-out for remaining time or save results separately)
-        self.fractions = [0.2]  # Set different fractions for the probing time-out (probe time-out = global time-out * fraction)
-        # self.fractions = [0.1, 0.2, 0.5, 0.7]
-        self.K = len(self.parameters['varh_values'])     # Set K as the length of variable heuristic values used as number of arms
-        self.m = [8] # [1, 2, 4, 8, 16]   for AST, the number of times for playing each arm and set the reward
-        self.reward = 0     # Initialize reward for multi-armed approach
+        self.flag = False
+        if config.hpo != "None":
+            self.modes = [config.hpo]
+            self.fractions = [config.probing_ratio]
+            self.rounds = config.rounds
+        elif config.hpo == "None":
+            self.modes = [config.search_strategy]
+        self.reward = 0
 
-        def handler (signum, frame):
+        def handler(signum, frame):
             raise TimeoutError
-        signal.signal (signal.SIGALRM, handler)
+
+        signal.signal(signal.SIGALRM, handler)
+
         for mode in self.modes:
             self.mode = mode
             print(f"Running {self.mode} analysis with, solver={self.solver}, Time={int(self.global_timeout_sec)} sec")
-            if self.mode == "BayesianOptimisation":
+
+            if self.mode == "GridSearch":
+                for fraction in self.fractions:
+                    self.probe_timeout_sec = self.global_timeout_sec * fraction
+                    self.results_list = []
+                    self.GridSearch()
+                    self.find_best_rows()
+                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                               "valh": self.find_best_rows()['valh'].iloc[0],
+                               "restart": self.find_best_rows()['restart'].iloc[0],
+                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                   BestRow["geocoef"])
+                    self.save_results_to_csv()
+
+            elif self.mode == "RandomSearch":
+                for fraction in self.fractions:
+                    self.probe_timeout_sec = self.global_timeout_sec * fraction
+                    self.results_list = []
+                    for i in range(self.rounds):
+                        random_strategy = self.gen_random_strategy()
+                        varh = random_strategy['varh_values']
+                        valh = random_strategy['valh_values']
+                        strategy = random_strategy['RestartStrategy']
+                        seq = random_strategy['restartsequence']
+                        coef = random_strategy['geocoef']
+                        print(f"Iteration {i + 1} with varh={varh}, valh={valh}, restart={strategy}, restartsequence={seq}, ,geocoef={coef}, solver={self.solver}")
+                        self.solveXCSP(varh, valh, strategy, seq, coef)
+                    self.find_best_rows()
+                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                               "valh": self.find_best_rows()['valh'].iloc[0],
+                               "restart": self.find_best_rows()['restart'].iloc[0],
+                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                   BestRow["geocoef"])
+                    self.save_results_to_csv()
+
+
+            elif self.mode == "HyperBand":
+                for fraction in self.fractions:
+                    self.probe_timeout_sec = self.global_timeout_sec * fraction
+                    self.used_pairs = []
+                    self.results_list = []
+                    self.hyperband_optimisation()
+                    self.find_best_rows()
+                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                               "valh": self.find_best_rows()['valh'].iloc[0],
+                               "restart": self.find_best_rows()['restart'].iloc[0],
+                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                   BestRow["geocoef"])
+                    self.save_results_to_csv()
+
+            elif self.mode == "BayesianOptimisation":
                 for fraction in self.fractions:
                     self.probe_timeout_sec = self.global_timeout_sec * fraction #set the probing time-out
                     self.results_list = []
@@ -76,123 +184,47 @@ class XCSP:
                 for fraction in self.fractions:
                     self.probe_timeout_sec = self.global_timeout_sec * fraction
                     self.results_list = []
-                    for m in self.m : # run the approach m times and set reward to the mth observed reward
-                        self.AST(self.K, m)
-                        self.find_best_rows()
-                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                                   "valh": self.find_best_rows()['valh'].iloc[0],
-                                   "restart": self.find_best_rows()['restart'].iloc[0],
-                                   "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
-                                    "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
-                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
-                                       BestRow["geocoef"])
-                        self.save_results_to_csv()
+                    self.AST(len(self.parameters['varh_values']) , self.rounds)
+                    self.find_best_rows()
+                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                               "valh": self.find_best_rows()['valh'].iloc[0],
+                               "restart": self.find_best_rows()['restart'].iloc[0],
+                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                   BestRow["geocoef"])
+                    self.save_results_to_csv()
 
             elif self.mode == "FreeSearch":
                 self.freesearch()
                 self.save_results_to_csv()
 
-    def Bayesian_optimisation(self):
-        SpaceParams = {**self.parameters, 'RestartStrategy': self.RestartStrategy, 'restartsequence': self.restartsequence, 'geocoef': self.geocoef} # Combine the existing parameters, restart strategy, restart sequence, and geocoef into a dictionary
-        opt = Optimizer(dimensions=dimensions_aslist(SpaceParams), base_estimator="GP")    # Initialize the optimizer with the given parameters and a Gaussian Process (GP) as the base estimator
-        def func(params):
-            params = point_asdict(SpaceParams, params) # Extract the parameters from dictionary
-            varh = params["varh_values"]
-            valh = params["valh_values"]
-            restrat = params["RestartStrategy"]
-            restratSeq = params["restartsequence"]
-            geocoef = params["geocoef"]
-            self.solveXCSP(varh, valh, restrat, restratSeq, geocoef)
-            return 1
-
-        for i in range(self.rounds): # Perform the optimization for number of rounds
-            next_x = opt.ask() # Ask the optimizer for the next set of parameters to try
-            f_val = func(next_x) # Evaluate (update) the function with the given parameters
-            output = opt.tell(next_x, f_val) # Tell the optimizer the result of the evaluation
-            # If the function values and the parameters haven't changed for the last four iterations, break the loop
-            if len(output.func_vals) >= 4 and (tuple(output.func_vals[-1:]) == tuple(output.func_vals[-2:-1])) and (
-                    tuple(output.func_vals[-2:-1]) == tuple(output.func_vals[-3:-2])) and (
-                    tuple(output.func_vals[-3:-2]) == tuple(output.func_vals[-4:-3])):
-                if len(output.x_iters) >= 4 and (tuple(output.x_iters[-1:]) == tuple(output.x_iters[-2:-1])) and (
-                        tuple(output.x_iters[-2:-1]) == tuple(output.x_iters[-3:-2])) and (
-                        tuple(output.x_iters[-3:-2]) == tuple(output.x_iters[-4:-3])):
-                    break
-        best_params = point_asdict(SpaceParams, opt.Xi[np.argmin(opt.yi)]) # Get the best parameters found during the optimization
-        return best_params
-
-    def AST(self, K, m):
-        def sigma_luby(n): # Define the Luby sequence function
-            sequence = [1]
-            while len(sequence) < n:
-                sequence += sequence + [2 * sequence[-1]]
-            return sequence[:n]
-
-        S = self.parameters['varh_values'] # the set of variable heuristics
-        V = iter(sorted(self.parameters['valh_values'])) # the set of sorted values heuristics alphabetically
-        R = iter(self.RestartStrategy) # the set of sorted restart strategies alphabetically
-        Seq = iter(self.restartsequence) # the set of restart sequences
-        geo = iter(self.geocoef) # the set of geometric coefficients
-        arms_played = {}  # Initialize a set for the played arms
-        for t in range(1, m):
-            # Get the next values from the iterators, or reset them if they're exhausted
-            valh = next(V, None)
-            restart = next(R, None)
-            restartsequence = next(Seq, None)
-            geocoef = next(geo, None)
-            if valh is None:
-                V = iter(sorted(self.parameters['valh_values']))
-                valh = next(V)
-            if restart is None:
-                R = iter(self.RestartStrategy)
-                restart = next(R)
-            if restartsequence is None:
-                Seq = iter(self.restartsequence)
-                restartsequence = next(Seq)
-            if geocoef is None:
-                geo = iter(self.geocoef)
-                geocoef = next(geo)
-
-            if sigma_luby(t)[-1] == 1:# If the last value in the Luby sequence is 1, choose a random arm and play it then remove it from the list
-                i = np.random.choice(S)
-                arms_played[t] = i
-                S.remove(i)
-                if len(S) == 0:
-                    S = K
-                self.solveXCSP(i, valh, restart, restartsequence, geocoef)
-
-            else: #play the arms from the previous two trials and choose the one with the highest reward
-                #Let ileft be the arm played at run t − σluby(t)
-                #Let iright be the arm played at run t − 1
-                i_right = arms_played[t - 1]
-                i_left = arms_played[t - (sigma_luby(t)[-1])]
-                self.solveXCSP(i_left, valh, restart, restartsequence, geocoef)
-                left_reward = self.reward
-                self.solveXCSP(i_right, valh, restart, restartsequence, geocoef)
-                right_reward = self.reward
-                if left_reward is None or right_reward is None:
-                    print("Warning: One or both rewards are None")
-                elif left_reward < right_reward:
-                    i = i_left
-                else:
-                    i = i_right
-                arms_played[t] = i
-                self.solveXCSP(i, valh, restart, restartsequence, geocoef)
-
     def solveXCSP(self , varh , valh, restart, restartsequence , geocoef):
         # set the time-out for probing phase and solving phase based on the mode, fraction and flags
         if not self.flag:
-            if self.mode == "BayesianOptimisation":
+            if self.mode == "BayesianOptimisation" or self.mode == "RandomSearch":
                 self.result_timeout_sec = self.probe_timeout_sec / (
                         self.rounds)
+            elif self.mode == "GridSearch":
+                self.result_timeout_sec = self.probe_timeout_sec / (
+                        (len(self.parameters['varh_values']) * len(
+                            self.parameters['valh_values']) * len(self.RestartStrategy) * len(
+                            self.restartsequence) * len(self.geocoef)))
             elif self.mode == "MultiArmed":
                 self.result_timeout_sec = self.probe_timeout_sec / (
                         self.rounds)
+            elif self.mode == "HyperBand":
+                self.result_timeout_sec = self.probe_timeout_sec / (
+                        self.rounds)
+
         if self.flag:
             self.result_timeout_sec = self.global_timeout_sec - self.probe_timeout_sec
         n_solutions, bound, status, solution = None , None , None , None
 
-        print(f'Running with varh={varh}, valh={valh}, restart={restart}, restartsequence={restartsequence} , geocoef={geocoef} , solver={self.solver} , Time={int(self.result_timeout_sec)} sec')
-        signal.alarm(int(self.result_timeout_sec))     # Set an alarm based on the calculated timeout
+        print(f'Running with varh={varh}, valh={valh}, restart={restart}, restartsequence={restartsequence} , geocoef={geocoef} , solver={self.solver} , Time={round(self.result_timeout_sec, 3)} sec')
+        # signal.alarm(int(self.result_timeout_sec))
+        signal.setitimer(signal.ITIMER_REAL, round(self.result_timeout_sec, 3), 0)
+        # Set an alarm based on the calculated timeout
 
         with open('datavarval.txt', 'w') as f: # Write the parameters to a file to fetch the parameters from this file and put them in xcsp model
             f.write(f'{varh}\n')
@@ -204,16 +236,16 @@ class XCSP:
             f.write(f'{geocoef}\n')
 
         # Construct the command to run the model
-        cmd = ["python3", f"modelsXCSP22/COP/{self.model}/{self.model}.py"]
+        cmd = ["python3", f"benchmarks/data/modelsXCSP22/COP/{self.model}/{self.model}.py"]
         if self.data:# If data is provided, add it to the command, some times we dont have it, and the data provided inside the model
-            cmd.append(f"-data=modelsXCSP22/COP/{self.model}/{self.data}")
+            cmd.append(f"-data=benchmarks/data/modelsXCSP22/COP/{self.model}/{self.data}")
         if self.dataparser:
-            cmd.append(f"-dataparser=modelsXCSP22/COP/{self.model}/{self.dataparser}.py")
+            cmd.append(f"-dataparser=benchmarks/data/modelsXCSP22/COP/{self.model}/{self.dataparser}.py")
         start_time = time.time()
         # Run the model and capture the output
         try:
-            print(cmd)
-            output = subprocess.run(cmd, universal_newlines=True, text=True, capture_output=True)
+            output = subprocess.run(cmd, universal_newlines=True, text=True, capture_output=True , timeout=round(self.result_timeout_sec, 3))
+
             end_time = time.time()
             elapsed_time = end_time - start_time
             elapsed_time = round(elapsed_time, 3)
@@ -309,11 +341,11 @@ class XCSP:
     def freesearch(self):
         n_solutions, bound, status, solution = None, None, None, None
         signal.alarm(self.global_timeout_sec)
-        cmd = ["python3", f"modelsXCSP22/COP/{self.model}/{self.model}.py"] # Prepare the command to run the model with the required information for free search based on documentation
+        cmd = ["python3", f"benchmarks/data/modelsXCSP22/COP/{self.model}/{self.model}.py"] # Prepare the command to run the model with the required information for free search based on documentation
         if self.data:
-            cmd.append(f"-data=modelsXCSP22/COP/{self.model}/{self.data}")
+            cmd.append(f"-data=benchmarks/data/modelsXCSP22/COP/{self.model}/{self.data}")
         if self.dataparser:
-            cmd.append(f"-dataparser=modelsXCSP22/COP/{self.model}/{self.dataparser}.py")
+            cmd.append(f"-dataparser=benchmarks/data/modelsXCSP22/COP/{self.model}/{self.dataparser}.py")
         # related commands for each solver just the base lines are used (for being fair, these commands are here, but we dont need them actually)
         if self.solver == "ace":
             cmd.extend([f"-solver=[ace] -luby -r_n=500 -ref="""])
