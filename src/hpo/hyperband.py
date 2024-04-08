@@ -9,7 +9,17 @@ class HyperBand:
             RestartStrategy = random.choice(self.RestartStrategy)
             restartsequence = random.choice(self.restartsequence)
             geocoef = random.choice(self.geocoef)
-            return {'varh_values':varh_values, 'valh_values':valh_values, 'RestartStrategy':RestartStrategy, 'restartsequence':restartsequence, 'geocoef':geocoef}
+
+            if self.format == "Minizinc":
+                if self.hyperparameters_search == "Block_Search":
+                    Blocks = random.choice(self.Blocks)
+                    return {'varh_values': varh_values, 'valh_values': valh_values, 'RestartStrategy': RestartStrategy,
+                            'restartsequence': restartsequence, 'geocoef': geocoef, 'Blocks': Blocks}
+                else:
+                    return {'varh_values': varh_values, 'valh_values': valh_values, 'RestartStrategy': RestartStrategy,
+                            'restartsequence': restartsequence, 'geocoef': geocoef}
+            elif self.format == "XCSP3":
+                return {'varh_values':varh_values, 'valh_values':valh_values, 'RestartStrategy':RestartStrategy, 'restartsequence':restartsequence, 'geocoef':geocoef}
 
         def func(params):
             varh = params["varh_values"]
@@ -17,7 +27,14 @@ class HyperBand:
             strategy = params["RestartStrategy"]
             seq = params["restartsequence"]
             coef = params["geocoef"]
-            result = self.solveXCSP(varh, valh, strategy, seq, coef)
+            if self.format == "Minizinc":
+                if self.hyperparameters_search == "Block_Search":
+                    Blocks = params["Blocks"]
+                    result = self.BlockSolveStrategy(varh, valh, strategy, seq, coef, Blocks)
+                else:
+                    result = self.solveStrategy(varh, valh, strategy, seq, coef)
+            elif self.format == "XCSP3":
+                result = self.solveXCSP(varh, valh, strategy, seq, coef)
             return result
 
         self.max_iter = self.rounds

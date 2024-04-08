@@ -1,0 +1,28 @@
+{
+    "Minizinc": {
+        "parameters": {
+            "varh_values": ["input_order", "first_fail", "smallest", "largest", "dom_w_deg", "occurrence", "most_constrained", "max_regret"],
+            "valh_values": ["indomain_min", "indomain_max", "indomain_median", "indomain_random", "indomain_split", "indomain_reverse_split", "indomain_interval"]
+        },
+        "RestartStrategy": ["luby", "GEOMETRIC"],
+        "restartsequence": [100, 200, 500],
+        "geocoef": [1.2, 1.5, 2]
+    },
+    "XCSP3": {
+        "parameters": {
+            "varh_values": ["DOM", "CHS", "FIRST_FAIL", "DOMWDEG", "DOMWDEG_CACD", "FLBA", "FRBA", "PickOnDom"],
+            "valh_values": ["MAX", "MIN", "MED", "MIDFLOOR", "MIDCEIL", "RAND"]
+        },
+        "RestartStrategy": ["luby", "GEOMETRIC"],
+        "restartsequence": [100, 200, 500],
+        "geocoef": [1.2, 1.5, 2]
+    }
+}
+
+//"parameters": {
+//        "restartstrategies": ["None", "Restart", "Full_Restart"],
+//        "hyperparametersearches": ["None", "Only_Var", "Only_Val", "Simple_Search", "Block_Search"],
+//        "searchstrategies": ["UserDefined", "FreeSearch", "DefaultPick"]
+//    },
+//    "hpo_algorithms": ["BayesianOptimisation", "GridSearch", "MultiArmed", "RandomSearch", "HyperBand"]
+//}

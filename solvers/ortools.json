@@ -1,0 +1,11 @@
+{
+    "Minizinc": {
+        "parameters": {
+            "varh_values": ["input_order", "first_fail", "smallest", "largest", "dom_w_deg", "occurrence", "most_constrained", "max_regret"],
+            "valh_values": ["indomain_min", "indomain_max", "indomain_median", "indomain_random", "indomain_split", "indomain_reverse_split", "indomain_interval"]
+        },
+        "RestartStrategy": ["luby", "GEOMETRIC"],
+        "restartsequence": [100, 200, 500],
+        "geocoef": [1.2, 1.5, 2]
+    }
+}

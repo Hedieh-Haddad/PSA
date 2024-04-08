@@ -6,25 +6,26 @@ import glob
 import os
 import math
 import re
-from minizinc import Instance, Model, Solver
+import json
 from hpo.bayesian import Bayesian
 from hpo.multiarmed import MultiArmed
 from hpo.hyperband import HyperBand
 from hpo.grid import Grid
 from hpo.random import Random
-
+from fetchmethod import FetchMethod
 
 class TimeoutError (Exception):
     pass
-class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
+class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random, FetchMethod):
     def __init__(self, config):
-        self.format = "XCSP3"
-        # self.format = "Minizinc"
+        # config.hpo = ["GridSearch", "RandomSearch", "BayesianOptimisation", "MultiArmed", "HyperBand", "None"]
+        # config.search_strategy = ["FreeSearch", "UserDefined", "[var]-[val]"]
+        # config.hyperparameters_restart = ["None", "Restart", "Full_Restart"]
+        # self.hyperparameters_search = ["None", "only_variable_strategy", "only_value_strategy", "simple_search_strategy", "block_search_strategy"]
+        self.format = config.format
         self.final_results_list = []
         self.results_list = []
         self.used_pairs = []
-        self.Blocks = [] # m
-        self.NBlocks = 0 # m
         self.method = "" # m
         self.counter = 0 # m
         self.EvaluationFlag = False # m
@@ -34,44 +35,70 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
         self.data = config.data
         self.dataparser = config.dataparser
         self.solver = config.solver
-        # config.hpo = ["GridSearch", "RandomSearch", "BayesianOptimisation", "MultiArmed", "HyperBand", "None"]
-        # config.search_strategy = ["FreeSearch", "UserDefined", "[var]-[val]"]
-        # config.hyperparameters_restart = ["None", "Restart", "Full_Restart"]
+        self.hyperparameters_search = config.hyperparameters_search
+        self.hpo = config.hpo
+        self.probing_ratio = config.probing_ratio
+        self.search_strategy = config.search_strategy
+        if self.hyperparameters_search == "Only_Var":
+            if self.format == "Minizinc":
+                # if self.solver == 'choco':
+                self.parameters = {
+                    "varh_values": ["input_order", "first_fail", "smallest"], #, "largest", "dom_w_deg", "occurrence","most_constrained", "max_regret"
+                    "valh_values": ["indomain_median"]}
+            elif self.format == "XCSP3":
+                if self.solver == 'choco':
+                    self.parameters = {
+                        'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
+                        'valh_values': ['MED']}
+                elif self.solver == 'ace':
+                    self.parameters = {
+                        'varh_values': ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom'],
+                        'valh_values': ['Median']}
 
-        # config.hyperparameters_search = ["None", "only_variable_strategy", "only_value_strategy", "simple_search_strategy", "block_search_strategy"]
-        if config.hyperparameters_search == "None":
-            self.solver == 'chocoooooo'
-        elif config.hyperparameters_search == "Only_Var":
-            if self.solver == 'choco':
+        elif self.hyperparameters_search == "Only_Val":
+            if self.format == "Minizinc":
+                # if self.solver == 'choco':
                 self.parameters = {
-                    'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
-                    'valh_values': ['MED']}
-            elif self.solver == 'ace':
+                    "varh_values": ["dom_w_deg"],
+                    "valh_values": ["indomain_min", "indomain_max", "indomain_median"]} #, "indomain_random", "indomain_split","indomain_reverse_split", "indomain_interval"
+
+            elif self.format == "XCSP3":
+                if self.solver == 'choco':
+                    self.parameters = {
+                        'varh_values': ['DOMWDEG'],
+                        'valh_values': ['MAX', 'MIN', 'MED', 'MIDFLOOR', 'MIDCEIL', 'RAND']}
+                elif self.solver == 'ace':
+                    self.parameters = {
+                        'varh_values': ['Wdeg'],
+                        'valh_values': ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp']}
+
+        elif self.hyperparameters_search == "Simple_Search":
+            if self.format == "Minizinc":
+                # if self.solver == 'choco':
                 self.parameters = {
-                    'varh_values': ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom'],
-                    'valh_values': ['Median']}
-        elif config.hyperparameters_search == "Only_Val":
-            if self.solver == 'choco':
+                    "varh_values": ["input_order", "first_fail", "smallest"], #, "largest", "dom_w_deg", "occurrence","most_constrained", "max_regret"
+                    "valh_values": ["indomain_min", "indomain_max", "indomain_median"]} #, "indomain_random", "indomain_split","indomain_reverse_split", "indomain_interval"
+            elif self.format == "XCSP3":
+                if self.solver == 'choco':
+                    self.parameters = {
+                        'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG'], # , 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'
+                        'valh_values': ['MAX', 'MIN', 'MED']} #, 'MIDFLOOR', 'MIDCEIL', 'RAND'
+                elif self.solver == 'ace':
+                    self.parameters = {
+                        'varh_values': ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom'],
+                        'valh_values': ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp']}
+
+        if self.format == "Minizinc":
+            if self.hyperparameters_search == "Block_Search":
+                self.Blocks = []  # m
+                self.NBlocks = 0  # m
+                # if self.solver == 'choco':
                 self.parameters = {
-                    'varh_values': ['DOMWDEG'],
-                    'valh_values': ['MAX', 'MIN', 'MED', 'MIDFLOOR', 'MIDCEIL', 'RAND']}
-            elif self.solver == 'ace':
-                self.parameters = {
-                    'varh_values': ['Wdeg'],
-                    'valh_values': ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp']}
-        elif config.hyperparameters_search == "Simple_Search":
-            if self.solver == 'choco':
-                self.parameters = {
-                    'varh_values': ['DOM', 'CHS', 'FIRST_FAIL', 'DOMWDEG', 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'],
-                    'valh_values': ['MAX', 'MIN', 'MED', 'MIDFLOOR', 'MIDCEIL', 'RAND']}
-            elif self.solver == 'ace':
-                self.parameters = {
-                    'varh_values': ['Impact', 'Dom', 'Activity', 'Wdeg', 'Deg', 'Memory', 'DdegOnDom', 'Ddeg', 'CRBS', 'PickOnDom'],
-                    'valh_values': ['Dist', 'Vals', 'OccsR', 'Bivs3', 'Median', 'AsgsFp']}
-        # elif config.hyperparameters_search == "Block_Search":
-        #     if format == "Minizinc":
-        #
-        #     elif format == "XCSP3":
+                    "varh_values": ["input_order", "first_fail", "smallest", "largest", "dom_w_deg",
+                                    "occurrence", "most_constrained", "max_regret"],
+                    "valh_values": ["indomain_min", "indomain_max", "indomain_median", "indomain_random",
+                                    "indomain_split", "indomain_reverse_split", "indomain_interval"]}
+
 
         if config.hyperparameters_restart == "None":
             self.RestartStrategy = ["None"]
@@ -79,12 +106,12 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
             self.geocoef = ["None"]
         elif config.hyperparameters_restart == "Restart":
             self.RestartStrategy = ["luby", "GEOMETRIC"]
-            self.restartsequence = [100 , 200, 500]
+            self.restartsequence = [100 , 500]
             self.geocoef = ["None"]
         elif config.hyperparameters_restart == "Full_Restart":
             self.RestartStrategy = ["luby", "GEOMETRIC"]
-            self.restartsequence = [100 , 200, 500]
-            self.geocoef = [1.2 , 1.5 , 2]
+            self.restartsequence = [100 , 200,  500]
+            self.geocoef = [1.2 , 1.5, 2]
 
         self.global_timeout_sec = config.timeout
         self.probe_timeout_sec = 0
@@ -94,12 +121,26 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
         self.Status = None
         self.Solution = None
         self.flag = False
-        if config.hpo != "None":
-            self.modes = [config.hpo]
-            self.fractions = [config.probing_ratio]
+
+        if self.hpo != "None":
+            self.modes = [self.hpo]
+            self.fractions = [self.probing_ratio]
             self.rounds = config.rounds
         elif config.hpo == "None":
-            self.modes = [config.search_strategy]
+            self.modes = [self.search_strategy]
+
+        if self.hyperparameters_search == "None":
+            if self.format == "Minizinc" :
+                self.search_strategy = "UserDefined"
+                self.modes = [self.search_strategy]
+            if self.format == "XCSP3" :
+                self.search_strategy = "DefaultPick"
+                self.modes = [self.search_strategy]
+                if self.solver == 'choco':
+                    self.parameters = {
+                        'varh_values': ['PICKONDOM0'], # , 'DOMWDEG_CACD', 'FLBA', 'FRBA', 'PICKONDOM0'
+                        'valh_values': ['MAX', 'MIN']} #, 'MIDFLOOR', 'MIDCEIL', 'RAND'
+
         self.reward = 0
 
         def handler(signum, frame):
@@ -110,6 +151,8 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
         for mode in self.modes:
             self.mode = mode
             print(f"Running {self.mode} analysis with, solver={self.solver}, Time={int(self.global_timeout_sec)} sec")
+            if self.format == "Minizinc":
+                self.fetch_method()
 
             if self.mode == "GridSearch":
                 for fraction in self.fractions:
@@ -117,13 +160,37 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
                     self.results_list = []
                     self.GridSearch()
                     self.find_best_rows()
-                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                               "valh": self.find_best_rows()['valh'].iloc[0],
-                               "restart": self.find_best_rows()['restart'].iloc[0],
-                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
-                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
-                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
-                                   BestRow["geocoef"])
+                    if self.format == "Minizinc":
+                        if self.hyperparameters_search == "Block_Search":
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0],
+                                       "block": self.find_best_rows()['block'].iloc[0]}
+                            self.BlockSolveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                               BestRow["restartsequence"],
+                                               BestRow["geocoef"],
+                                               BestRow["block"])  # call main function again for last run(solving phase)
+                        else:
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                            self.solveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                                    BestRow["restartsequence"],
+                                                    BestRow["geocoef"])
+
+                    elif self.format == "XCSP3":
+                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                   # fetch the configuration of the best row based of probing phase for transmitting to the solve phase
+                                   "valh": self.find_best_rows()['valh'].iloc[0],
+                                   "restart": self.find_best_rows()['restart'].iloc[0],
+                                   "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                   "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                       BestRow["geocoef"])  # call main function again for last run(solving phase)
                     self.save_results_to_csv()
 
             elif self.mode == "RandomSearch":
@@ -138,17 +205,48 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
                         seq = random_strategy['restartsequence']
                         coef = random_strategy['geocoef']
                         print(f"Iteration {i + 1} with varh={varh}, valh={valh}, restart={strategy}, restartsequence={seq}, ,geocoef={coef}, solver={self.solver}")
-                        self.solveXCSP(varh, valh, strategy, seq, coef)
-                    self.find_best_rows()
-                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                               "valh": self.find_best_rows()['valh'].iloc[0],
-                               "restart": self.find_best_rows()['restart'].iloc[0],
-                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
-                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
-                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
-                                   BestRow["geocoef"])
-                    self.save_results_to_csv()
 
+                        if self.format == "Minizinc":
+                            if self.hyperparameters_search == "Block_Search":
+                                block = random_strategy['block']
+                                self.BlockSolveStrategy(varh, valh, strategy, seq, coef, block)
+                            else:
+                                self.solveStrategy(varh, valh, strategy, seq, coef)
+                        elif self.format == "XCSP3":
+                            self.solveXCSP(varh, valh, strategy, seq, coef)
+                    self.find_best_rows()
+                    if self.format == "Minizinc":
+                        if self.hyperparameters_search == "Block_Search":
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0],
+                                       "block": self.find_best_rows()['block'].iloc[0]}
+                            self.BlockSolveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                               BestRow["restartsequence"],
+                                               BestRow["geocoef"],
+                                               BestRow["block"])  # call main function again for last run(solving phase)
+                        else:
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                            self.solveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                                    BestRow["restartsequence"],
+                                                    BestRow["geocoef"])
+
+                    elif self.format == "XCSP3":
+                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                   # fetch the configuration of the best row based of probing phase for transmitting to the solve phase
+                                   "valh": self.find_best_rows()['valh'].iloc[0],
+                                   "restart": self.find_best_rows()['restart'].iloc[0],
+                                   "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                   "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                       BestRow["geocoef"])  # call main function again for last run(solving phase)
+                    self.save_results_to_csv()
 
             elif self.mode == "HyperBand":
                 for fraction in self.fractions:
@@ -156,14 +254,40 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
                     self.used_pairs = []
                     self.results_list = []
                     self.hyperband_optimisation()
+                    print(len(self.parameters['varh_values']), self.rounds)
                     self.find_best_rows()
-                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                               "valh": self.find_best_rows()['valh'].iloc[0],
-                               "restart": self.find_best_rows()['restart'].iloc[0],
-                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
-                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
-                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
-                                   BestRow["geocoef"])
+                    if self.format == "Minizinc":
+                        if self.hyperparameters_search == "Block_Search":
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0],
+                                       "block": self.find_best_rows()['block'].iloc[0]}
+                            self.BlockSolveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                               BestRow["restartsequence"],
+                                               BestRow["geocoef"],
+                                               BestRow["block"])  # call main function again for last run(solving phase)
+                        else:
+
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                            self.solveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                                    BestRow["restartsequence"],
+                                                    BestRow["geocoef"])
+
+                    elif self.format == "XCSP3":
+                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                   # fetch the configuration of the best row based of probing phase for transmitting to the solve phase
+                                   "valh": self.find_best_rows()['valh'].iloc[0],
+                                   "restart": self.find_best_rows()['restart'].iloc[0],
+                                   "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                   "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                       BestRow["geocoef"])  # call main function again for last run(solving phase)
                     self.save_results_to_csv()
 
             elif self.mode == "BayesianOptimisation":
@@ -172,12 +296,33 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
                     self.results_list = []
                     self.Bayesian_optimisation()
                     self.find_best_rows()
-                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0], # fetch the configuration of the best row based of probing phase for transmitting to the solve phase
-                               "valh": self.find_best_rows()['valh'].iloc[0],
-                               "restart": self.find_best_rows()['restart'].iloc[0],
-                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
-                               "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
-                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"], BestRow["geocoef"]) # call main function again for last run(solving phase)
+                    if self.format == "Minizinc":
+                        if self.hyperparameters_search == "Block_Search":
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0],
+                                       "block": self.find_best_rows()['block'].iloc[0]}
+                            self.BlockSolveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                           BestRow["geocoef"], BestRow["block"])  # call main function again for last run(solving phase)
+                        else:
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                            self.solveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                                    BestRow["restartsequence"],
+                                                    BestRow["geocoef"])
+
+                    elif self.format == "XCSP3":
+                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0], # fetch the configuration of the best row based of probing phase for transmitting to the solve phase
+                                   "valh": self.find_best_rows()['valh'].iloc[0],
+                                   "restart": self.find_best_rows()['restart'].iloc[0],
+                                   "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                   "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"], BestRow["geocoef"]) # call main function again for last run(solving phase)
                     self.save_results_to_csv()
 
             elif self.mode == "MultiArmed":
@@ -186,36 +331,79 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
                     self.results_list = []
                     self.AST(len(self.parameters['varh_values']) , self.rounds)
                     self.find_best_rows()
-                    BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
-                               "valh": self.find_best_rows()['valh'].iloc[0],
-                               "restart": self.find_best_rows()['restart'].iloc[0],
-                               "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
-                                "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
-                    self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
-                                   BestRow["geocoef"])
+                    if self.format == "Minizinc":
+                        if self.hyperparameters_search == "Block_Search":
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0],
+                                       "block": self.find_best_rows()['block'].iloc[0]}
+                            self.BlockSolveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                               BestRow["restartsequence"],
+                                               BestRow["geocoef"],
+                                               BestRow["block"])  # call main function again for last run(solving phase)
+                        else:
+                            BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                       "valh": self.find_best_rows()['valh'].iloc[0],
+                                       "restart": self.find_best_rows()['restart'].iloc[0],
+                                       "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                       "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                            self.solveStrategy(BestRow["varh"], BestRow["valh"], BestRow["restart"],
+                                                    BestRow["restartsequence"],
+                                                    BestRow["geocoef"])
+
+                    elif self.format == "XCSP3":
+                        BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                                   # fetch the configuration of the best row based of probing phase for transmitting to the solve phase
+                                   "valh": self.find_best_rows()['valh'].iloc[0],
+                                   "restart": self.find_best_rows()['restart'].iloc[0],
+                                   "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                                   "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                        self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                                       BestRow["geocoef"])  # call main function again for last run(solving phase)
                     self.save_results_to_csv()
 
             elif self.mode == "FreeSearch":
-                self.freesearch()
+                if self.format == "Minizinc":
+                    self.solvefree()
+                elif self.format == "XCSP3":
+                    self.freesearch()
                 self.save_results_to_csv()
 
+            elif self.mode == "UserDefined":
+                if self.format == "Minizinc":
+                    self.Defaultsolve()
+                self.save_results_to_csv()
+
+            elif self.mode == "DefaultPick":
+                self.results_list = []
+                self.GridSearch()
+                self.find_best_rows()
+                BestRow = {"varh": self.find_best_rows()['varh'].iloc[0],
+                           "valh": self.find_best_rows()['valh'].iloc[0],
+                           "restart": self.find_best_rows()['restart'].iloc[0],
+                           "restartsequence": self.find_best_rows()['restartsequence'].iloc[0],
+                           "geocoef": self.find_best_rows()['geocoef'].iloc[0]}
+                self.solveXCSP(BestRow["varh"], BestRow["valh"], BestRow["restart"], BestRow["restartsequence"],
+                               BestRow["geocoef"])  # call main function again for last run(solving phase)
+                self.save_results_to_csv()
+
+
+
     def solveXCSP(self , varh , valh, restart, restartsequence , geocoef):
-        # set the time-out for probing phase and solving phase based on the mode, fraction and flags
         if not self.flag:
-            if self.mode == "BayesianOptimisation" or self.mode == "RandomSearch":
-                self.result_timeout_sec = self.probe_timeout_sec / (
-                        self.rounds)
-            elif self.mode == "GridSearch":
+            if self.mode == "GridSearch":
                 self.result_timeout_sec = self.probe_timeout_sec / (
                         (len(self.parameters['varh_values']) * len(
                             self.parameters['valh_values']) * len(self.RestartStrategy) * len(
                             self.restartsequence) * len(self.geocoef)))
-            elif self.mode == "MultiArmed":
+            elif self.mode in ["BayesianOptimisation", "RandomSearch", "MultiArmed", "HyperBand"]:
+                self.result_timeout_sec = self.probe_timeout_sec / (self.rounds)
+            elif self.mode == "DefaultPick":
                 self.result_timeout_sec = self.probe_timeout_sec / (
-                        self.rounds)
-            elif self.mode == "HyperBand":
-                self.result_timeout_sec = self.probe_timeout_sec / (
-                        self.rounds)
+                    (len(self.parameters['valh_values']) * len(self.RestartStrategy) * len(
+                        self.restartsequence) * len(self.geocoef)))
 
         if self.flag:
             self.result_timeout_sec = self.global_timeout_sec - self.probe_timeout_sec
@@ -244,8 +432,14 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
         start_time = time.time()
         # Run the model and capture the output
         try:
-            output = subprocess.run(cmd, universal_newlines=True, text=True, capture_output=True , timeout=round(self.result_timeout_sec, 3))
+            # try:
+            output = subprocess.run(cmd, universal_newlines=True, text=True, capture_output=True)
 
+            #     output = subprocess.run(cmd, universal_newlines=True, text=True, capture_output=True , timeout=round(self.result_timeout_sec, 3))
+            # except subprocess.TimeoutExpired:
+            #     print("The command timed out.")
+            #     output = None
+            #     return 1
             end_time = time.time()
             elapsed_time = end_time - start_time
             elapsed_time = round(elapsed_time, 3)
@@ -348,7 +542,7 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
             cmd.append(f"-dataparser=benchmarks/data/modelsXCSP22/COP/{self.model}/{self.dataparser}.py")
         # related commands for each solver just the base lines are used (for being fair, these commands are here, but we dont need them actually)
         if self.solver == "ace":
-            cmd.extend([f"-solver=[ace] -luby -r_n=500 -ref="""])
+            cmd.extend([f"-solver=[ace] -luby -r_n=500 "])
         elif self.solver == "choco":
             cmd.extend(["-f ", f"-solver=[choco,v] -best -last -lc 1 -restarts [luby,500,0,50000,true]"])
         start_time = time.time()# Record the start time
@@ -416,6 +610,9 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
         return bound
 
     def parse_output(self, output):
+        if output == None:
+            n_solutions, bound, status, solution = None, None, None, None
+            return n_solutions, bound, status, solution
         lines = output.stdout.split('\n') # Split the output into lines
         n_solutions, bound, status, solution = None , None , None , None
         for line in lines:# If a line starts with "NSolution", "Objective", "Status", or "Solution", extract the corresponding value
@@ -430,11 +627,20 @@ class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random):
         return n_solutions, bound, status, solution
 
     def find_best_rows(self):
-        results_df = pd.DataFrame(self.results_list)# Convert the results list to a DataFrame
-        try:# Sort the DataFrame
-            results_df.sort_values(by=['mode', 'Objective', 'ElapsedTime'],
-                                       ascending=[True, True, True], inplace=True)
-            best_rows = results_df.drop_duplicates(subset='mode', keep='first')# Drop duplicated rows
+        results_df = pd.DataFrame(self.results_list)
+        try:
+            if self.format == "Minizinc":
+                if self.results_list[0]['method'] == "maximize":
+                        results_df.sort_values(by=['mode', 'Objective', 'ElapsedTime'],
+                                               ascending=[True, False, True], inplace=True)
+                elif self.results_list[0]['method'] == "minimize":
+                        results_df.sort_values(by=['mode', 'Objective', 'ElapsedTime'],
+                                               ascending=[True, True, True], inplace=True)
+
+            elif self.format == "XCSP3":
+                results_df.sort_values(by=['mode', 'Objective', 'ElapsedTime'],
+                                           ascending=[True, True, True], inplace=True)
+            best_rows = results_df.drop_duplicates(subset='mode', keep='first')
             self.flag = True
             return best_rows
         except AttributeError:

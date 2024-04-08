@@ -1,0 +1,11 @@
+{
+    "XCSP3": {
+        "parameters": {
+            "varh_values": ["Impact", "Dom", "Activity", "Wdeg", "Deg", "Memory", "DdegOnDom", "Ddeg", "CRBS", "PickOnDom"],
+            "valh_values": ["Dist", "Vals", "OccsR", "Bivs3", "Median", "AsgsFp"]
+        },
+        "RestartStrategy": ["luby", "GEOMETRIC"],
+        "restartsequence": [100, 200, 500],
+        "geocoef": [1.2, 1.5, 2]
+    }
+}
