@@ -21,3 +21,28 @@ class Grid:
                                     self.solveStrategy(varh, valh, strategy, seq, coef)
                             elif self.format == "XCSP3":
                                 self.solveXCSP(varh, valh, strategy, seq, coef)
+
+
+class Grid:
+  def __init__(config, cp_framework):
+    self.config = config
+    self.cp_framework = cp_framework
+
+  def generate_restart_parameters():
+
+
+  def generate_search_parameters():
+
+  def generate_parameters():
+
+
+  def probe(probe_timeout_sec):
+    timeout_per_round = probe_timeout_sec / self.config.rounds
+    all_statistics = []
+    num_rounds = 0
+    for parameters in self.generate_parameters():
+      if num_rounds >= self.config.rounds:
+        break
+      num_rounds += 1
+      parameters["timeout"] = timeout_per_round
+      all_statistics.add(self.cp_framework.solve(parameters))
