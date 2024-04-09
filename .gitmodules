@@ -1,0 +1,3 @@
+[submodule "benchmarks/mzn-challenge"]
+	path = benchmarks/mzn-challenge
+	url = git@github.com:MiniZinc/mzn-challenge.git
