@@ -9,7 +9,6 @@ def aircraftlanding():
     with open('datavarval.txt', 'r') as f:
         varh = f.readline().strip()
         valh = f.readline().strip()
-        phase = f.readline().strip()
         solver = f.readline().strip()
         restart = f.readline().strip()
         restartsequence = f.readline().strip()

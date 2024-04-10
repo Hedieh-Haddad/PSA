@@ -5,11 +5,20 @@ from skopt.utils import point_asdict, dimensions_aslist
 import numpy as np
 from src.solveminizinc import SolveMinizinc
 class Bayesian(SolveMinizinc):
+    def __init__(self, config, cp_framework, probe_timeout_sec):
+        self.format = config.format
+        self.parameters = config.parameters
+        self.probe_timeout_sec =probe_timeout_sec
+        self.hyperparameters_search = config.hyperparameters_search
+
+        self.Bayesian_optimisation()
+
     def Bayesian_optimisation(self):
         if self.format == "Minizinc":
             if self.hyperparameters_search == "Block_Search":
                 SpaceParams = {**self.parameters, 'RestartStrategy': self.RestartStrategy, 'restartsequence': self.restartsequence, 'geocoef': self.geocoef, "Blocks" : self.Blocks}
             else:
+                print("I'm hereeeeeeeeeeeeee")
                 SpaceParams = {**self.parameters, 'RestartStrategy': self.RestartStrategy, 'restartsequence': self.restartsequence, 'geocoef': self.geocoef}
 
         elif self.format == "XCSP3":

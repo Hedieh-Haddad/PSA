@@ -24,16 +24,18 @@ class Grid:
 
 
 class Grid:
-  def __init__(config, cp_framework):
+  def __init__(self, config, cp_framework, probe_timeout_sec):
     self.config = config
     self.cp_framework = cp_framework
+    print(self.cp_framework)
 
-  def generate_restart_parameters():
+  # def generate_restart_parameters():
 
 
-  def generate_search_parameters():
+  def generate_search_parameters(self, config):
+      print(config.solver)
 
-  def generate_parameters():
+  # def generate_parameters():
 
 
   def probe(probe_timeout_sec):

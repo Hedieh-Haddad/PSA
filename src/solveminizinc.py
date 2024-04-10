@@ -5,6 +5,7 @@ import logging
 import re
 
 class SolveMinizinc:
+
     def BlockSolveStrategy(self, varh, valh, restart, restartSeq, geocoef, Block):
         print(f'Running with varh={varh}, valh={valh}, restart={restart}, restartsequence={restartSeq} , geocoef={geocoef} , Block={Block} , solver={self.solver} , Time={round(self.result_timeout_sec, 3)} sec')
         rest_elements = " ++ ".join([elem for elem in self.Blocks if elem != Block])
@@ -114,8 +115,6 @@ class SolveMinizinc:
             if objective_result is None:
                 objective_result = 10000000000
                 return objective_result
-
-
 
     def solveStrategy(self, varh, valh, restart, restartSeq, geocoef):
         model = Model(self.model)

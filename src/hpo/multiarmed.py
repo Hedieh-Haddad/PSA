@@ -61,9 +61,11 @@ class MultiArmed:
             if sigma_luby(t)[-1] == 1:  # If the last value in the Luby sequence is 1, choose a random arm and play it then remove it from the list
                 i = np.random.choice(S)
                 arms_played[t] = i
+                print("123456",S)
+                print(i)
                 S.remove(i)
                 if len(S) == 0:
-                    S = K
+                    S = self.parameters['varh_values']
                 if self.format == "Minizinc":
                     if self.hyperparameters_search == "Block_Search":
                         self.BlockSolveStrategy(i, valh, restart, restartsequence, geocoef, blocks)
