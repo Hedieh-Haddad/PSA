@@ -45,3 +45,5 @@ benchmarks/.ipynb_checkpoints
 datavarval.txt
 output.txt
 result.csv
+src/__pycache__/
+src/hpo/__pycache__/
