@@ -1,9 +1,9 @@
 {
     "XCSP3": {
-        "parameters": {
+        "search": {
             "varh_values": ["Impact", "Dom", "Activity", "Wdeg", "Deg", "Memory", "DdegOnDom", "Ddeg", "CRBS", "PickOnDom"],
             "valh_values": ["Dist", "Vals", "OccsR", "Bivs3", "Median", "AsgsFp"]
         },
-        "RestartStrategy": ["luby", "GEOMETRIC"]
+        "restart_strategies": ["luby", "GEOMETRIC"]
     }
 }

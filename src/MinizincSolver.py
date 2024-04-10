@@ -2,88 +2,44 @@ import json
 import traceback
 import logging
 from main import *
-from fetchmethod import *
-
+from pathlib import Path
 
 class MinizincSolver:
+  def extract_solve_statement(file_path):
+    """
+    Extracts the solve statement from a .mzn file and separates the rest of the content.
+
+    Parameters:
+    - file_path: The path to the .mzn file.
+
+    Returns:
+    - A tuple containing two strings: the solve statement and the rest of the file content.
+    """
+    content = Path(file_path).read_text()
+    solve_start = content.find('solve')
+    solve_end = content.find(';', solve_start) + 1
+    solve_statement = content[solve_start:solve_end]
+    rest_content = content[:solve_start] + content[solve_end:]
+    return rest_content, solve_statement
+
   def __init__(self, config):
-    self.final_results_list = []
-    self.results_list = []
-    self.flag = False
-    probe_timeout_sec = config.timeout * config.probing_ratio
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'Minizinc' in solver_config:
-        minizinc_config = solver_config['Minizinc']
+    self.solver_config = load_config(config)
+    self.config = config
+    self.model, self.solve_statement = extract_solve_statement(config.model)
+    self.blocks = self.extract_blocks()
 
-    if config.hyperparameters_search == "Only_Var":
-      self.add_timeout_option(minizinc_config, probe_timeout_sec)
-      self.add_options_with_value_selection(minizinc_config, "indomain_median")
-      # minizinc_config['parameters']['valh_values'] = "indomain_median"
+  def retrieve_all_blocks():
+    FetchMethod.fetch_method(self, config, self.solver_config)
 
-    elif config.hyperparameters_search == "Only_Val":
-      self.add_timeout_option(minizinc_config, probe_timeout_sec)
-      self.add_options_with_variable_selection(minizinc_config, "dom_w_deg")
-      # minizinc_config['parameters']['varh_values'] = "dom_w_deg"
 
-    elif config.hyperparameters_search == "Simple_Search":
-      self.add_timeout_option(minizinc_config, probe_timeout_sec)
-      self.variable_strategies(config)
-      self.value_strategies(config)
-
-    elif config.hyperparameters_search == "Block_Search":
-      self.Blocks = []
-      self.add_timeout_option(minizinc_config, probe_timeout_sec)
-      self.variable_strategies(config)
-      self.value_strategies(config)
-
-    elif config.hyperparameters_search == "None":
-      self.add_timeout_option(minizinc_config, config.timeout)
-      if config.search_strategy != "FreeSearch":
-        config.search_strategy = "UserDefined"
-
-    if config.hyperparameters_restart == "None":
-      minizinc_config['RestartStrategy'] = ["None"]
-      self.add_options_with_restart(config, minizinc_config)
-
-    elif config.hyperparameters_restart in ["Restart", "Full_Restart"] :
-      self.restart_strategies(config)
-      self.add_options_with_restart(config, minizinc_config)
-
-    Default_Var, Default_Val, minizinc_config['blocks'] = FetchMethod.fetch_method(self, config, minizinc_config)
-    self.solve(config, minizinc_config)
+  def add_base_options(self, parameters):
+    pass
 
   def add_free_search_options(self, parameters):
     parameters['options']  = ["-f"]
-    # self.parameters['options'] = ["-f"]
 
-  def add_options_with_value_selection(self, parameters, value_strategy):
-    if value_strategy in parameters['parameters']['valh_values']:
-      parameters['parameters']['valh_values'] = value_strategy
-    else:
-      print(f"Value strategy {value_strategy} is not available for this solver.")
-      exit(1)
-
-  def add_options_with_variable_selection(self, parameters, variable_strategy):
-    if variable_strategy in parameters['parameters']['varh_values']:
-      parameters['parameters']['varh_values'] = variable_strategy
-    else:
-      print(f"Variable strategy {variable_strategy} is not available for this solver.")
-      exit(1)
-
-  def add_options_with_search(self, parameters, value_strategy, variable_strategy):
-    if value_strategy in parameters['parameters']['valh_values']:
-      if variable_strategy in parameters['parameters']['varh_values']:
-        parameters['parameters']['valh_values'] = value_strategy
-        parameters['parameters']['varh_values'] = variable_strategy
-      else:
-        print(f"Variable strategy {variable_strategy} is not available for this solver.")
-        exit(1)
-    else:
-      print(f"Value strategy {value_strategy} is not available for this solver.")
-      exit(1)
-    # self.add_options_with_value_selection(parameters, value_strategy)
-    # self.add_options_with_variable_selection(parameters, variable_strategy)
+  def add_user_defined_search(self, parameters):
+    pass
 
   def add_options_with_restart(self, config, parameters):
     parameters['restartsequence'] = ["500"]
@@ -99,25 +55,14 @@ class MinizincSolver:
     parameters['timeout'] = timeout
 
   def restart_strategies(self, config):
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'Minizinc' in solver_config:
-        minizinc_config = solver_config['Minizinc']
-    return minizinc_config['RestartStrategy']
+    return self.solver_config['RestartStrategy']
 
   def variable_strategies(self, config):
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'Minizinc' in solver_config:
-        minizinc_config = solver_config['Minizinc']
-    return minizinc_config['parameters']['varh_values']
+    return self.solver_config['parameters']['varh_values']
 
   def value_strategies(self, config):
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'Minizinc' in solver_config:
-        minizinc_config = solver_config['Minizinc']
-    return minizinc_config['parameters']['valh_values']
+    return self.solver_config['parameters']['valh_values']
+
 #################################################################################
   def solve(self, config, parameters):
     # varh = parameters['parameters']['varh_values']

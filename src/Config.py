@@ -16,7 +16,7 @@ class Config:
     parser.add_argument('--hpo', required=True, type=str, help='HPO algorithm to apply: None | BayesianOptimisation | GridSearch | MultiArmed | RandomSearch | HyperBand') # | FreeSearch
     parser.add_argument('--rounds', type=int, required=False, help='The number of iterations the HPO algorithm performs. The more iterations, the less time per iterations. Only when --hpo is not `None`.')
     parser.add_argument('--probing_ratio', required=False, type=float, help='If 0.2, 20 percent of the time is dedicated to selecting the best search strategy (probing phase). Only when --hpo is not `None`.')
-    parser.add_argument('--search_strategy', required=False, type=str, help='The search strategy to use: UserDefined | FreeSearch | [var]_[val]. `UserDefined` (just MiniZinc) indicates we use the search strategy in the model, if any. `free` means free search. You can use `{var}_` or `_{val}` for using the default variable selection strategy. Only when --hpo is `None`.')
+    parser.add_argument('--search_strategy', required=False, type=str, help='The search strategy to use: UserDefined | FreeSearch | [var]_[val]. `UserDefined` (just MiniZinc) indicates we use the search strategy in the model, if any. `free` means free search. You can use `var_` or `_val` for using the default variable selection strategy. Only when --hpo is `None`.')
     parser.add_argument('--hyperparameters_restart', required=False, type=str, help='The restart hyperparameters the algorithm will optimise: None | Restart | Full_Restart')
     parser.add_argument('--hyperparameters_search', required=False, type=str, help='The search hyperparameters the algorithm will optimise: None | Only_Var | Only_Val | Simple_Search | Block_Search')
 

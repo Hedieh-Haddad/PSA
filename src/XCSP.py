@@ -17,12 +17,8 @@ from fetchmethod import FetchMethod
 class TimeoutError (Exception):
     pass
 
-class XCSP:
+class XCSP(Bayesian, MultiArmed, HyperBand, Grid, Random, FetchMethod):
     def __init__(self, config):
-        # config.hpo = ["GridSearch", "RandomSearch", "BayesianOptimisation", "MultiArmed", "HyperBand", "None"]
-        # config.search_strategy = ["FreeSearch", "UserDefined", "[var]-[val]"]
-        # config.hyperparameters_restart = ["None", "Restart", "Full_Restart"]
-        # self.hyperparameters_search = ["None", "only_variable_strategy", "only_value_strategy", "simple_search_strategy", "block_search_strategy"]
         self.format = config.format
         self.final_results_list = []
         self.results_list = []

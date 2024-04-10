@@ -20,88 +20,25 @@ class XCSP3Solver:
     self.results_list = []
     self.flag = False
     probe_timeout_sec = config.timeout * config.probing_ratio
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'XCSP3' in solver_config:
-        xcsp_config = solver_config['XCSP3']
+    self.solver_config = load_config(config)
+    self.config = config
 
-    if config.hyperparameters_search == "Only_Var":
-      self.add_timeout_option(xcsp_config, probe_timeout_sec)
-      self.add_options_with_value_selection(xcsp_config, "indomain_median")
-      # xcsp_config['parameters']['valh_values'] = "indomain_median"
+    self.solve(config, self.solver_config)
 
-    elif config.hyperparameters_search == "Only_Val":
-      self.add_timeout_option(xcsp_config, probe_timeout_sec)
-      self.add_options_with_variable_selection(xcsp_config, "dom_w_deg")
-      # xcsp_config['parameters']['varh_values'] = "dom_w_deg"
-
-    elif config.hyperparameters_search == "Simple_Search":
-        if config.search_strategy in ['{var}_', '_{val}']:
-            print("The --hyperparameters_search option is not compatible with --search_strategy.")
-            exit(1)
-        self.add_timeout_option(xcsp_config, probe_timeout_sec)
-        self.variable_strategies(config)
-        self.value_strategies(config)
-
-    elif config.hyperparameters_search == "None":
-      self.add_timeout_option(xcsp_config, probe_timeout_sec)
-      config.search_strategy = "[var]_[val]"
-
-    if config.hpo == "None":
-        if config.hyperparameters_search == "None":
-            if config.search_strategy in ['{var}_', '_{val}']:
-                self.add_timeout_option(xcsp_config, probe_timeout_sec)
-                if config.solver == "choco":
-                    self.add_options_with_variable_selection(xcsp_config, "PICKONDOM0")
-                elif config.solver == "ace":
-                    self.add_options_with_variable_selection(xcsp_config, "PickOnDom")
-                if config.solver == "choco":
-                    self.add_options_with_value_selection(xcsp_config, "MED")
-                elif config.solver == "ace":
-                    self.add_options_with_value_selection(xcsp_config, "Dist")
-
-
-    if config.hyperparameters_restart == "None":
-      xcsp_config['RestartStrategy'] = ["None"]
-      self.add_options_with_restart(config, xcsp_config)
-
-    elif config.hyperparameters_restart in ["Restart", "Full_Restart"]:
-      self.restart_strategies(config)
-      self.add_options_with_restart(config, xcsp_config)
-
-    self.solve(config, xcsp_config)
+  def add_base_options(self, parameters):
+    parameters['options'].setdefault([])
+    if config.solver == "ace":
+      parameters['options'].add(f"-solver=[ace]")
+    elif config.solver == "choco":
+      parameters['options'].add(f"-solver=[choco,v] -best -last -lc 1")
 
   def add_free_search_options(self, parameters):
-    parameters['options'] = ["-f"]
-    # self.parameters['options'] = ["-f"]
-
-  def add_options_with_value_selection(self, parameters, value_strategy):
-    if value_strategy in parameters['parameters']['valh_values']:
-      parameters['parameters']['valh_values'] = value_strategy
-    else:
-      print(f"Value strategy {value_strategy} is not available for this solver.")
-      exit(1)
-
-  def add_options_with_variable_selection(self, parameters, variable_strategy):
-    if variable_strategy in parameters['parameters']['varh_values']:
-      parameters['parameters']['varh_values'] = variable_strategy
-    else:
-      print(f"Variable strategy {variable_strategy} is not available for this solver.")
-      exit(1)
-
-  def add_options_with_search(self, parameters, value_strategy, variable_strategy):
-    if value_strategy in parameters['parameters']['valh_values']:
-      if variable_strategy in parameters['parameters']['varh_values']:
-        parameters['parameters']['valh_values'] = value_strategy
-        parameters['parameters']['varh_values'] = variable_strategy
-      else:
-        print(f"Variable strategy {variable_strategy} is not available for this solver.")
-        exit(1)
-    else:
-      print(f"Value strategy {value_strategy} is not available for this solver.")
-      exit(1)
-    # self.add_options_with_value_selection(parameters, value_strategy)
-    # self.add_options_with_variable_selection(parameters, variable_strategy)
+    parameters['options'].setdefault([])
+    parameters['options'].add("-f")
+    if config.solver == "ace":
+      parameters['options'].add(f"-solver=[ace] -luby -r_n=500 ")
+    elif config.solver == "choco":
+      parameters['options'].add(f"-solver=[choco,v] -best -last -lc 1 -restarts [luby,500,0,50000,true]")
 
   def add_options_with_restart(self, config, parameters):
     parameters['restartsequence'] = ["500"]
@@ -117,25 +54,13 @@ class XCSP3Solver:
     parameters['timeout'] = timeout
 
   def restart_strategies(self, config):
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'XCSP3' in solver_config:
-        xcsp_config = solver_config['XCSP3']
-    return xcsp_config['RestartStrategy']
+    return self.solver_config['RestartStrategy']
 
   def variable_strategies(self, config):
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'XCSP3' in solver_config:
-        xcsp_config = solver_config['XCSP3']
-    return xcsp_config['parameters']['varh_values']
+    return self.solver_config['parameters']['varh_values']
 
   def value_strategies(self, config):
-    with open(f'solvers/{config.solver}.json', 'r') as f:
-      solver_config = json.load(f)
-      if 'XCSP3' in solver_config:
-        xcsp_config = solver_config['XCSP3']
-    return xcsp_config['parameters']['valh_values']
+    return self.solver_config['parameters']['valh_values']
 
   #################################################################################
   def solve(self, config, parameters):

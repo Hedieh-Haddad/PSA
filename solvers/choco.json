@@ -1,16 +1,16 @@
 {
     "Minizinc": {
-        "parameters": {
+        "search": {
             "varh_values": ["input_order", "first_fail", "smallest", "largest", "dom_w_deg", "occurrence", "most_constrained", "max_regret"],
             "valh_values": ["indomain_min", "indomain_max", "indomain_median", "indomain_random", "indomain_split", "indomain_reverse_split", "indomain_interval"]
         },
-        "RestartStrategy": ["luby"]
+        "restart_strategies": ["luby"]
     },
     "XCSP3": {
-        "parameters": {
+        "search": {
             "varh_values": ["DOM", "CHS", "FIRST_FAIL", "DOMWDEG", "DOMWDEG_CACD", "FLBA", "FRBA", "PickOnDom"],
             "valh_values": ["MAX", "MIN", "MED", "MIDFLOOR", "MIDCEIL", "RAND"]
         },
-        "RestartStrategy": ["luby", "GEOMETRIC"]
+        "restart_strategies": ["luby", "GEOMETRIC"]
     }
 }
