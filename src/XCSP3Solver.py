@@ -2,7 +2,6 @@ import json
 import traceback
 import logging
 from main import *
-from fetchmethod import *
 import signal
 import subprocess
 import pandas as pd
@@ -22,8 +21,11 @@ class XCSP3Solver:
     probe_timeout_sec = config.timeout * config.probing_ratio
     self.solver_config = load_config(config)
     self.config = config
-
     self.solve(config, self.solver_config)
+
+  # We don't support blocks of variable optimization in XCSP3.
+  def retrieve_all_blocks():
+    return []
 
   def add_base_options(self, parameters):
     parameters['options'].setdefault([])
@@ -36,7 +38,7 @@ class XCSP3Solver:
     parameters['options'].setdefault([])
     parameters['options'].add("-f")
     if config.solver == "ace":
-      parameters['options'].add(f"-solver=[ace] -luby -r_n=500 ")
+      parameters['options'].add(f"-solver=[ace] -luby -r_c=500 ")
     elif config.solver == "choco":
       parameters['options'].add(f"-solver=[choco,v] -best -last -lc 1 -restarts [luby,500,0,50000,true]")
 

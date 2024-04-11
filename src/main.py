@@ -1,12 +1,11 @@
 from Config import *
-from XCSP import *
+# from XCSP import *
 import random
 from hpo.bayesian import Bayesian
 # from hpo.multiarmed import MultiArmed
 # from hpo.hyperband import HyperBand
 # from hpo.grid import Grid
 # from hpo.random import Random
-from fetchmethod import FetchMethod
 from MinizincSolver import *
 from XCSP3Solver import *
 
@@ -24,13 +23,13 @@ def make_cp_framework(config):
     exit(1)
 
 def load_config(config):
-  with open(f'solvers/{config.solver}.json', 'r') as f:
-  solver_config = json.load(f)
-  if config.format in solver_config:
-    return solver_config[config.format]
-  else:
-    print(f"This solver has no {config.format} configuration.")
-    exit(1)
+  with open(f'../solvers/{config.solver}.json', 'r') as f:
+    solver_config = json.load(f)
+    if config.format in solver_config:
+      return solver_config[config.format]
+    else:
+      print(f"This solver has no {config.format} configuration.")
+      exit(1)
 
 def build_search_hyperparameters(cp_framework, hyperparameters):
   config = cp_framework.config
@@ -85,11 +84,15 @@ def build_hyperparameters(cp_framework):
     "restart_sequences": Integer(100, 1000),
     "geometric_coefficients": Real(1.1, 2.0)
   }
-  blocks = cp_framework.retrieve_all_blocks()
-  if len(blocks) > 1:
-    hyperparameters["blocks"] = Categorical(blocks)
+  nblocks = cp_framework.num_blocks()
+  if nblocks > 1:
+    hyperparameters["blocks"] = Integer(0, nblocks-1)
+  elif config.hyperparameters_search == "Block_Search":
+    print("This model has no block to optimize, so you should use the option `--hyperparameters_search Simple_Search` instead.")
+    exit(1)
   build_search_hyperparameters(cp_framework, hyperparameters)
   build_restart_hyperparameters(cp_framework, hyperparameters)
+  return hyperparameters
 
 def probe(cp_framework):
   config = cp_framework.config
@@ -98,15 +101,15 @@ def probe(cp_framework):
     exit(1)
   probe_timeout_sec = config.timeout * config.probing_ratio
   hyperparameters = build_hyperparameters(cp_framework)
-  if config.hpo == "BayesianOptimisation":
+  if config.hpo == "bayesian":
     return Bayesian.probe(cp_framework, hyperparameters, probe_timeout_sec)
-  # elif config.hpo == "GridSearch":
+  # elif config.hpo == "grid":
   #   return Grid(cp_framework).probe(hyperparameters, probe_timeout_sec)
-  # elif config.hpo == "MultiArmed":
+  # elif config.hpo == "multiarmed":
   #   return MultiArmed(cp_framework).probe(hyperparameters, probe_timeout_sec)
-  # elif config.hpo == "RandomSearch":
+  # elif config.hpo == "random":
   #   return Random(cp_framework).probe(hyperparameters, probe_timeout_sec)
-  # elif config.hpo == "HyperBand":
+  # elif config.hpo == "hyperband":
   #   return HyperBand(cp_framework).probe(hyperparameters, probe_timeout_sec)
   else:
     print("Unknown HPO method, please see the options.")
@@ -126,15 +129,14 @@ def add_value_selection_strategy(cp_framework, parameters, valh):
 
 def hyperparameters_from(config, cp_framework):
   parameters = {}
-  cp_framework.add_base_options(parameters)
-  cp_framework.add_timeout_option(parameters, config.timeout)
+  parameters["timeout"] = config.timeout
   if config.search_strategy == "UserDefined":
     if config.format != 'Minizinc':
       print("The UserDefined search strategy is only valid for MiniZinc models.")
       exit(1)
     # No option to add when we use the user-defined search strategy.
   elif config.search_strategy == "FreeSearch":
-    cp_framework.add_free_search_options(parameters)
+    pass
   else:
     if config.search_strategy.startswith('_'):
       add_value_selection_strategy(cp_framework, parameters, config.search_strategy[1:])
@@ -149,22 +151,28 @@ def hyperparameters_from(config, cp_framework):
       add_value_selection_strategy(cp_framework, parameters, search[1])
   return parameters
 
-def main():
-  random.seed()
-  config = Config()
-  cp_framework = make_cp_framework(config)
+def configure_parameters(cp_framework):
+  config = cp_framework.config
   if config.hpo == "None":
     if config.search_strategy == "None":
       print("The --search_strategy option is mandatory when a HPO method is not specified.")
       exit(1)
-    parameters = hyperparameters_from(config, cp_framework)
-    cp_framework.solve(parameters)
+    return hyperparameters_from(config, cp_framework)
   else:
     if config.search_strategy != None:
       print("The --hpo option is not compatible with --search_strategy (you either guess the search strategy with HPO or use an existing one).")
       exit(1)
-    best_parameters = probe(config, cp_framework)
-    print(cp_framework.solve(best_parameters))
+    return probe(cp_framework)
+
+def print_json(statistics):
+  print("""{"type": "statistics", "statistics": """ + str(statistics) + "}")
+
+def main():
+  random.seed()
+  config = Config()
+  cp_framework = make_cp_framework(config)
+  parameters = configure_parameters(cp_framework)
+  print_json(cp_framework.solve(parameters))
 
 if __name__ == "__main__":
   main()

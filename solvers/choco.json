@@ -11,6 +11,6 @@
             "varh_values": ["DOM", "CHS", "FIRST_FAIL", "DOMWDEG", "DOMWDEG_CACD", "FLBA", "FRBA", "PickOnDom"],
             "valh_values": ["MAX", "MIN", "MED", "MIDFLOOR", "MIDCEIL", "RAND"]
         },
-        "restart_strategies": ["luby", "GEOMETRIC"]
+        "restart_strategies": ["luby", "geometric"]
     }
 }
