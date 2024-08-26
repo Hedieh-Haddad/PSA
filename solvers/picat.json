@@ -1,9 +1,0 @@
-{
-    "XCSP3": {
-        "search": {
-            "varh_values": ["RunRobin", "Wdeg" ,"Memory", "Ddeg" ,"PickOnDom", "WdegOnDom", "FrOnDom", "ProcOnDom" ,"Regret" ,"FrbaOnDom", "Deg" ,"Rand", "Lexico", "Srand"],
-            "valh_values": ["Vals", "Dist", "OccsR" ,"Median" ,"AsgsFp" ,"Flrs", "Bivs" , "First", "InternDist", "Last" ,"Robin", "RunRobin", "Bivs2", "AsgsFm", "Occs", "FlrsE"],
-            "default_varh": "Wdeg",
-            "default_valh": "First"
-        }}
-}
