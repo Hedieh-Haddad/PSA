@@ -1,16 +1,17 @@
 {
     "Minizinc": {
         "search": {
-            "varh_values": ["input_order", "first_fail", "smallest", "largest", "dom_w_deg", "occurrence", "most_constrained", "max_regret"],
-            "valh_values": ["indomain_min", "indomain_max", "indomain_median", "indomain_random", "indomain_split", "indomain_reverse_split", "indomain_interval"]
-        },
-        "restart_strategies": ["luby"]
-    },
+            "varh_values": ["first_fail", "dom_w_deg", "occurrence", "most_constrained", "max_regret"],
+            "valh_values": ["indomain_split", "indomain_reverse_split", "indomain_interval"],
+            "default_varh": "dom_w_deg",
+            "default_valh": "indomain_min"
+        }},
     "XCSP3": {
         "search": {
-            "varh_values": ["DOM", "CHS", "FIRST_FAIL", "DOMWDEG", "DOMWDEG_CACD", "FLBA", "FRBA", "PickOnDom"],
-            "valh_values": ["MAX", "MIN", "MED", "MIDFLOOR", "MIDCEIL", "RAND"]
-        },
-        "restart_strategies": ["luby", "geometric"]
+            "varh_values": ["DOM", "CHS", "DOMWDEG", "FLBA", "FRBA", "ACTIVITY" ,"INPUT", "RAND", "DOMWDEG_CACD", "FIRST_FAIL"],
+            "valh_values": ["MAX", "MIN", "MED", "MIDFLOOR", "MIDCEIL", "RAND"],
+            "default_varh": "DOMWDEG",
+            "default_valh": "MIN"
+        }
     }
 }

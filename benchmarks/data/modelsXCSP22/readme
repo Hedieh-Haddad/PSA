@@ -1,8 +1,0 @@
-
-In this directory, you will find all model and data files for the main CSP/COP tracks of the 2022 XCSP3 Competition.
-For some problems, a few minor differences may exist when generating XCSP3 files, compared to those used 
-during the competition. This is because some instances were generated several months or years ago (e.g., in 2018),
-while having some models still slightly evolving.
-Anyway, if you want to make a comparison between a solver ond those run during the 2022 competition,
-you have to directly work with the XCSP3 files of the 2022 competition.
-  
